@@ -1,11 +1,15 @@
+import streamlit as st
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-from langchain.llms import OpenAI
+from langchain_openai import OpenAI, ChatOpenAI
 from langchain.document_loaders import PyPDFLoader
 import openai
 import os
-import streamlit as st
 import tempfile
+import dotenv
+
+# Load environment variables from .env file
+dotenv.load_dotenv()
 
 st.title("Inox Tender - Analyse d'Appel d'Offres")
 st.write("Déposez les documents pour analyse.")
@@ -23,13 +27,14 @@ uploaded_files = st.file_uploader(
 
 def analyse_document(content):
     """Analyse document content using OpenAI"""
-    llm = OpenAI(model_name="gpt-4")
+    llm = ChatOpenAI(model="gpt-4", temperature=0)
+
     prompt = PromptTemplate(
         template="Analyse ce document et extrait les exigences obligatoires:\n{doc}",
         input_variables=["doc"]
     )
     chain = LLMChain(llm=llm, prompt=prompt)
-    return chain.run(doc=content)
+    return chain.invoke({"doc": content})
 
 
 def extract_text_from_pdf(uploaded_file):
