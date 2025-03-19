@@ -14,101 +14,79 @@ import docx2txt
 # Load environment variables
 dotenv.load_dotenv()
 
-st.title("Inox Tender - Analyse d'Appel d'Offres")
-st.write("Déposez les documents pour analyse.")
-
-# Load API key
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
+# Load API Key
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
     st.error(
         "⚠️ OpenAI API Key is missing! Please set `OPENAI_API_KEY` in your environment variables.")
+    st.stop()
 
-# File uploader
-uploaded_files = st.file_uploader(
-    "Téléchargez vos documents", accept_multiple_files=True, type=['pdf', 'docx'])
+openai.api_key = OPENAI_API_KEY
 
+# Streamlit UI
+st.set_page_config(page_title="INOX Tender AI", layout="wide")
+st.title("📄 INOX Tender AI - Assistance aux Appels d'Offres")
 
-def extract_text_from_pdf(uploaded_file):
-    """Extract text from a PDF file"""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        loader = PyPDFLoader(tmp_file.name)
-        pages = loader.load_and_split()
-        return " ".join([page.page_content for page in pages])
+st.sidebar.header("📂 Télécharger vos documents")
+uploaded_files = st.sidebar.file_uploader("Ajoutez vos documents (PDF, DOCX)", type=[
+                                          "pdf", "docx"], accept_multiple_files=True)
 
-
-def extract_text_from_docx(uploaded_file):
-    """Extract text from a DOCX file"""
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".docx") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        return docx2txt.process(tmp_file.name)
-
-
-def create_retriever(docs):
-    """Create FAISS vector store retriever for document search"""
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=2000, chunk_overlap=200)
-    chunks = text_splitter.split_text(docs)
-
-    vectorstore = FAISS.from_texts(chunks, OpenAIEmbeddings())
-    return vectorstore.as_retriever()
-
-
-def extract_metadata(text):
-    """Extracts project name, client, and deadline using GPT-4"""
-    prompt = PromptTemplate(
-        template="Analyse ce texte et identifie:\n- Le nom du projet\n- Le client\n- La date limite de soumission\nTexte:\n{text}",
-        input_variables=["text"]
-    )
-    llm = ChatOpenAI(model="gpt-4", temperature=0)
-    chain = RetrievalQA.from_chain_type(llm=llm, retriever=create_retriever(
-        text), chain_type="stuff", return_source_documents=False)
-
-    response = chain.invoke(
-        {"query": "Identifie les informations clés du projet"})
-    return response
-
-
-def analyse_document(content):
-    """Analyze document content using RAG-based retrieval"""
-    retriever = create_retriever(content)
-    llm = ChatOpenAI(model="gpt-4", temperature=0)
-
-    chain = RetrievalQA.from_chain_type(
-        llm=llm, retriever=retriever, chain_type="stuff", return_source_documents=False)
-    response = chain.invoke(
-        {"query": "Quelles sont les exigences obligatoires de cet appel d'offres?"})
-    return response
-
-
+# OpenAI Assistants API
 if uploaded_files:
-    st.success(f"{len(uploaded_files)} fichiers téléchargés.")
-    st.write("Analyse en cours... ⏳")
+    st.sidebar.success(f"{len(uploaded_files)} fichiers ajoutés.")
 
-    full_text = ""
-    for uploaded_file in uploaded_files:
-        if uploaded_file.type == "application/pdf":
-            full_text += extract_text_from_pdf(uploaded_file)
-        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-            full_text += extract_text_from_docx(uploaded_file)
+    # Create Assistant Thread
+    with st.spinner("Analyse en cours..."):
+        thread = openai.beta.threads.create()
+        thread_id = thread.id
 
-    metadata = extract_metadata(full_text)
-    exigences_obligatoires = analyse_document(full_text)
+        # Upload each file to OpenAI Assistants API
+        for file in uploaded_files:
+            response = openai.beta.threads.files.create(
+                thread_id=thread_id,
+                file=file
+            )
 
-    rapport = f"""
-    # 🔍 Rapport d’Analyse
+        # Run Assistant
+        run = openai.beta.threads.runs.create(
+            thread_id=thread_id,
+            assistant_id="your_assistant_id_here"
+        )
 
-    ## 📂 Détails
-    - **Nom du projet :** {metadata.get("nom_projet", "Inconnu")}
-    - **Client :** {metadata.get("client", "Inconnu")}
-    - **Date limite :** {metadata.get("date_limite", "Non spécifiée")}
+        # Poll for Completion
+        while True:
+            run_status = openai.beta.threads.runs.retrieve(
+                thread_id=thread_id, run_id=run.id)
+            if run_status.status == "completed":
+                break
+            elif run_status.status == "failed":
+                st.error("L'analyse a échoué. Veuillez réessayer.")
+                st.stop()
 
-    ## 📑 Exigences Obligatoires
-    {exigences_obligatoires}
+        # Retrieve Messages
+        messages = openai.beta.threads.messages.list(thread_id=thread_id)
+        response_text = messages.data[0].content.text if messages.data else "Aucune réponse générée."
 
-    ---
-    Généré par **Inox Tender**
-    """
+        # Display Analysis
+        st.subheader("📊 Résultats de l'analyse")
+        st.write(response_text)
 
-    st.download_button("Télécharger le rapport", rapport,
-                       file_name="rapport_tender.md")
+        # Download Report Option
+        st.download_button("📥 Télécharger le rapport",
+                           response_text, file_name="analyse_tender.txt")
+
+# Chat Interface
+st.subheader("💬 Interagir avec l'Assistant")
+user_query = st.text_area("Posez une question sur les documents analysés:")
+if st.button("Envoyer"):
+    if not user_query.strip():
+        st.warning("Veuillez entrer une question.")
+    else:
+        with st.spinner("Réponse en cours..."):
+            response = openai.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=user_query
+            )
+            assistant_response = response.data[0].content.text if response.data else "Aucune réponse générée."
+            st.write("**Réponse:**", assistant_response)
