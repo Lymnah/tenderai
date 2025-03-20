@@ -382,7 +382,7 @@ if uploaded_files:
             # Attach files and send query
             query = """
             Extract the following details from the uploaded tender document:
-            1. Submission deadline (date and time) and time zone (infer if not specified, e.g., CET/CEST for Swiss documents).
+            1. Submission deadline (date and time) and time zone.
             2. Submission method (online, email, or printed, including exact address and labeling instructions).
             3. Submission format (paper, electronic, specific templates, etc., with all requirements).
             4. Any required document structures or templates (list all annexes and specifications).
