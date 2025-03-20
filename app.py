@@ -12,7 +12,7 @@ import base64
 
 # Global variable to toggle simulation mode
 SIMULATION_MODE = (
-    True  # Set to True to use mock responses, False to use real OpenAI API
+    False  # Set to True to use mock responses, False to use real OpenAI API
 )
 
 # Load environment variables
@@ -193,6 +193,16 @@ st.markdown(
         border-radius: 5px;
         padding: 10px;
     }
+    /* Progress log styling */
+    .progress-log {
+        background-color: #2a2a2a;
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 10px;
+        max-height: 200px;
+        overflow-y: auto;
+        color: #d3d3d3;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -275,10 +285,20 @@ file_id_to_name = {}
 
 
 # Mock response function
-def load_mock_response():
+def load_mock_response(prompt_type):
     try:
         with open("mock_response.txt", "r", encoding="utf-8") as f:
-            return f.read()
+            base_response = f.read()
+        # Simulate different responses based on prompt type
+        if "dates" in prompt_type.lower():
+            return f"Mock Dates Response for {prompt_type}:\n- Date: 2025-04-15 14:00, Time Zone: CET, Event: Submission Deadline, Source: mock_file.pdf"
+        elif "requirements" in prompt_type.lower():
+            return f"Mock Requirements Response for {prompt_type}:\n**Mandatory Requirements**\n- Must have ISO 9001 certification [mock_file.pdf]\n**Optional Requirements**\n- None [mock_file.pdf]\n**Legal Requirements**\n- Compliance with GDPR [mock_file.pdf]\n**Financial Requirements**\n- Minimum budget of 500k EUR [mock_file.pdf]\n**Security Requirements**\n- Must have cybersecurity certification [mock_file.pdf]\n**Certifications**\n- ISO 9001 [mock_file.pdf]"
+        elif "folder structure" in prompt_type.lower():
+            return f"Mock Folder Structure Response for {prompt_type}:\n- Main Submission Folder\n  - Technical Docs: Technical Proposal, Specs Sheet [mock_file.pdf]\n  - Financial Docs: Budget Plan [mock_file.pdf]"
+        elif "summary" in prompt_type.lower():
+            return f"Mock Tender Summary Response for {prompt_type}:\nThe client is seeking a comprehensive solution for a construction project, requiring technical expertise, financial stability, and compliance with legal standards. Key deliverables include a detailed technical proposal and a financial plan. The project aims to build a new facility by 2026, with a focus on sustainability. [mock_file.pdf]"
+        return base_response
     except FileNotFoundError:
         st.error("Mock response file 'mock_response.txt' not found.")
         return "No response generated."
@@ -318,7 +338,7 @@ if uploaded_files:
                 continue
 
             if SIMULATION_MODE:
-                # Simulate upload time (2 seconds)
+                # Simulate upload time (1 second)
                 time.sleep(1)
                 # Mock file ID
                 mock_file_id = f"mock_file_id_{i}"
@@ -368,76 +388,90 @@ if uploaded_files:
     else:
         st.success(f"Successfully uploaded all {total_files} file(s) to OpenAI.")
 
-    # Create a new thread with analysis spinner
-    with st.spinner("Analyzing documents..."):
+    # Create a new thread for analysis
+    if not SIMULATION_MODE:
+        thread = openai.beta.threads.create()
+        thread_id = thread.id
+    else:
+        thread_id = "mock_thread_id"
+
+    # Function to run a prompt and get a response
+    def run_prompt(
+        file_ids,
+        prompt,
+        task_name,
+        progress_callback=None,
+        total_tasks=None,
+        current_task=None,
+    ):
         if SIMULATION_MODE:
-            # Simulate analysis time (3 seconds)
-            time.sleep(1)
-            thread_id = "mock_thread_id"
-            response_text = load_mock_response()
+            time.sleep(0.2)  # Simulate processing time
+            response = load_mock_response(task_name)
+            if progress_callback and total_tasks and current_task:
+                progress_callback(current_task / total_tasks, f"Completed {task_name}")
+            return response
         else:
+            # Create a new thread for each prompt to avoid message accumulation
             thread = openai.beta.threads.create()
             thread_id = thread.id
 
-            # Attach files and send query
-            query = """
-            Extract the following details from the uploaded tender document:
-            1. Submission deadline (date and time) and time zone.
-            2. Submission method (online, email, or printed, including exact address and labeling instructions).
-            3. Submission format (paper, electronic, specific templates, etc., with all requirements).
-            4. Any required document structures or templates (list all annexes and specifications).
-            Provide a detailed response with all relevant information, including additional notes (e.g., tender validity, evaluation criteria), and cite the source file explicitly.
-            """
             openai.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
-                content=query,
+                content=prompt,
                 attachments=[
                     {"file_id": file_id, "tools": [{"type": "file_search"}]}
-                    for file_id in uploaded_file_ids
+                    for file_id in file_ids
                 ],
             )
-
-            # Start the assistant run
             run = openai.beta.threads.runs.create(
                 thread_id=thread_id,
                 assistant_id=ASSISTANT_ID.strip(),
                 tools=[{"type": "file_search"}],
             )
-
-            # Poll for completion with a single spinner
             spinner_placeholder = st.empty()
             while True:
                 run_status = openai.beta.threads.runs.retrieve(
                     thread_id=thread_id, run_id=run.id
                 )
                 with spinner_placeholder.container():
-                    st.spinner(f"Analyzing documents... (Status: {run_status.status})")
+                    st.spinner(
+                        f"Processing {task_name}... (Status: {run_status.status})"
+                    )
                 if run_status.status == "completed":
                     break
                 elif run_status.status in ["failed", "cancelled"]:
-                    st.error(f"Analysis failed with status: {run_status.status}")
-                    st.stop()
-                time.sleep(1)
+                    st.error(f"{task_name} failed with status: {run_status.status}")
+                    if progress_callback and total_tasks and current_task:
+                        progress_callback(
+                            current_task / total_tasks, f"Failed {task_name}"
+                        )
+                    return "No response generated."
+                time.sleep(0.5)  # Reduced polling interval
             spinner_placeholder.empty()
-
-            # Retrieve messages
             messages = openai.beta.threads.messages.list(thread_id=thread_id)
             assistant_responses = [
                 msg for msg in messages.data if msg.role == "assistant"
             ]
             if not assistant_responses:
-                response_text = "No response generated."
-            else:
-                response_text = "\n".join(
-                    content.text.value
-                    for msg in assistant_responses
-                    for content in msg.content
-                    if content.type == "text"
-                )
+                if progress_callback and total_tasks and current_task:
+                    progress_callback(
+                        current_task / total_tasks, f"No response for {task_name}"
+                    )
+                return "No response generated."
+            response = "\n".join(
+                content.text.value
+                for msg in assistant_responses
+                for content in msg.content
+                if content.type == "text"
+            )
+            if progress_callback and total_tasks and current_task:
+                progress_callback(current_task / total_tasks, f"Completed {task_name}")
+            return response
 
-        # Replace citations with original filenames
-        def replace_citations(match):
+    # Replace citations with original filenames
+    def replace_citations(text):
+        def replace_citation(match):
             citation = match.group(0)
             if len(file_id_to_name) == 1:
                 return f"【{list(file_id_to_name.values())[0]}】"
@@ -450,51 +484,182 @@ if uploaded_files:
                 else citation
             )
 
-        response_text = re.sub(r"【.*?】", replace_citations, response_text)
-        response_text = re.sub(r'"tmp\w+\.pdf"', "", response_text)
+        text = re.sub(r"【.*?】", replace_citation, text)
+        text = re.sub(r'"tmp\w+\.pdf"', "", text)
+        text = re.sub(r"\*(.*?)\*", r"\1", text)  # Remove single asterisks
+        return text
 
-        # Remove single asterisks used for italicization
-        response_text = re.sub(r"\*(.*?)\*", r"\1", response_text)
+    # Analysis with enhanced feedback
+    st.subheader("Analyzing Documents...")
 
-    # Display analysis with proper formatting
-    st.subheader("📊 Résultats des Analyses")
-    with st.expander("Détail:", expanded=True):
-        # Split response into sections based on numbered headings
-        sections = re.split(r"(\d+\.\s+[^:]+:)", response_text)
-        for i in range(len(sections)):
-            section = sections[i].strip()
-            if not section:
-                continue
-            if re.match(
-                r"\d+\.\s+[^:]+:", section
-            ):  # Section heading (e.g., "1. Submission Deadline:")
-                if i > 0:  # Add a divider before each section except the first
-                    st.markdown("<hr>", unsafe_allow_html=True)
-                st.markdown(
-                    f"<div class='section-heading'>{section}</div>",
-                    unsafe_allow_html=True,
-                )
-            else:
-                # Render the section content as-is, preserving the assistant's Markdown formatting
-                st.markdown(section, unsafe_allow_html=False)
+    # Progress bar and status log
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    progress_log = st.empty()
 
-        # Remove redundant "Citations:" section if it exists
-        response_lines = response_text.split("\n")
-        if any("Citations:" in line for line in response_lines):
-            response_text = "\n".join(
-                line for line in response_lines if "Citations:" not in line
+    def analyze_documents():
+        total_tasks = (
+            len(uploaded_file_ids) * 3 + 1
+        )  # 3 tasks per file + 1 summary task
+        current_task = 0
+        progress_log_messages = []
+
+        def update_progress(progress, message):
+            nonlocal current_task, progress_log_messages
+            current_task += 1
+            progress_bar.progress(progress)
+            status_text.text(message)
+            progress_log_messages.append(f"[{time.strftime('%H:%M:%S')}] {message}")
+            progress_log.markdown(
+                "<div class='progress-log'>"
+                + "<br>".join(progress_log_messages)
+                + "</div>",
+                unsafe_allow_html=True,
             )
 
-        st.markdown(
-            f"\n**Source:** {list(file_id_to_name.values())[0] if file_id_to_name else 'Unknown'}",
-            unsafe_allow_html=False,
-        )
+        all_dates = []
+        all_requirements = []
+        all_folder_structures = []
 
-    # Download button
+        for file_id in uploaded_file_ids:
+            file_name = file_id_to_name[file_id]
+
+            dates_prompt = """
+            Extract all important dates, milestones, and deadlines from the provided tender document. Include the following details for each date:
+            - The specific date and time (if available).
+            - The time zone (infer if not specified, e.g., CET/CEST for Swiss documents).
+            - The purpose or event associated with the date (e.g., submission deadline, site visit, contract start).
+            - The source file where the date was found (cite explicitly).
+            Format the output as a list, with each entry in the format:
+            - Date: [date and time], Time Zone: [time zone], Event: [event], Source: [file name]
+            If no dates are found, state: "No important dates found in [file name]."
+            """
+            dates_response = run_prompt(
+                [file_id],
+                dates_prompt,
+                f"Dates for {file_name}",
+                update_progress,
+                total_tasks,
+                current_task,
+            )
+            dates_response = replace_citations(dates_response)
+            all_dates.append(dates_response)
+
+            requirements_prompt = """
+            Extract the technical requirements from the provided tender document. Categorize the requirements as follows:
+            - Mandatory Requirements: List all requirements that must be met.
+            - Optional Requirements: List any requirements that are not mandatory.
+            - Legal Requirements: List any legal or regulatory requirements.
+            - Financial Requirements: List any financial requirements (e.g., budget, payment terms).
+            - Security Requirements: List any security-related requirements.
+            - Certifications: List any required certifications or qualifications.
+            For each category, provide a detailed list of the requirements, citing the source file explicitly. If a category has no requirements, state: "[Category] requirements not found in [file name]."
+            Format the output with clear headings for each category.
+            """
+            requirements_response = run_prompt(
+                [file_id],
+                requirements_prompt,
+                f"Requirements for {file_name}",
+                update_progress,
+                total_tasks,
+                current_task,
+            )
+            requirements_response = replace_citations(requirements_response)
+            all_requirements.append(requirements_response)
+
+            folder_structure_prompt = """
+            Extract the required folder structure for tender submission from the provided document. Include the following details:
+            - The exact folder and subfolder structure as specified in the tender.
+            - The documents that must be included in each folder or subfolder.
+            - Cite the source file explicitly.
+            Format the output as a hierarchical list, e.g.:
+            - Main Folder
+              - Subfolder 1: [Document 1], [Document 2]
+              - Subfolder 2: [Document 3]
+            If no folder structure is specified, state: "No folder structure specified in [file name]."
+            Ensure the output is accurate and does not include any hallucinated information.
+            """
+            folder_structure_response = run_prompt(
+                [file_id],
+                folder_structure_prompt,
+                f"Folder Structure for {file_name}",
+                update_progress,
+                total_tasks,
+                current_task,
+            )
+            folder_structure_response = replace_citations(folder_structure_response)
+            all_folder_structures.append(folder_structure_response)
+
+        summary_prompt = """
+        Provide a holistic summary of the tender based on all the provided documents. Focus on what the client is asking for, including:
+        - The overall purpose of the tender.
+        - The main deliverables or services required.
+        - Any key objectives or priorities mentioned.
+        - A brief overview of the scope and scale of the project.
+        Synthesize the information from all files to create a cohesive summary. Cite the source files where relevant. Format the output as a concise paragraph (150-200 words).
+        """
+        summary_response = run_prompt(
+            uploaded_file_ids,
+            summary_prompt,
+            "Tender Summary",
+            update_progress,
+            total_tasks,
+            current_task,
+        )
+        summary_response = replace_citations(summary_response)
+
+        return all_dates, all_requirements, all_folder_structures, summary_response
+
+    # Run the analysis and get results
+    all_dates, all_requirements, all_folder_structures, summary_response = (
+        analyze_documents()
+    )
+
+    # Clear the progress indicators
+    status_text.empty()
+    progress_log.empty()
+
+    # Display Results in Dedicated Sections
+    st.subheader("📊 Tender Analysis Results")
+
+    # Important Dates Section
+    st.markdown("### 🕒 Important Dates and Milestones")
+    with st.expander("View Dates and Milestones", expanded=True):
+        for dates in all_dates:
+            st.markdown(dates, unsafe_allow_html=False)
+            st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Tender Summary Section
+    st.markdown("### 📝 Tender Summary")
+    with st.expander("View Tender Summary", expanded=True):
+        st.markdown(summary_response, unsafe_allow_html=False)
+
+    # Technical Requirements Section
+    st.markdown("### 🔧 Technical Requirements")
+    with st.expander("View Technical Requirements", expanded=True):
+        for requirements in all_requirements:
+            st.markdown(requirements, unsafe_allow_html=False)
+            st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Folder Structure Section
+    st.markdown("### 📁 Required Folder Structure")
+    with st.expander("View Folder Structure", expanded=True):
+        for folder_structure in all_folder_structures:
+            st.markdown(folder_structure, unsafe_allow_html=False)
+            st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Download Full Report
+    full_report = (
+        "Tender Analysis Report\n\n"
+        "## Important Dates and Milestones\n" + "\n\n".join(all_dates) + "\n\n"
+        "## Tender Summary\n" + summary_response + "\n\n"
+        "## Technical Requirements\n" + "\n\n".join(all_requirements) + "\n\n"
+        "## Required Folder Structure\n" + "\n\n".join(all_folder_structures)
+    )
     st.download_button(
-        "📥 Download Report",
-        response_text,
-        file_name="tender_analysis.txt",
+        "📥 Download Full Report",
+        full_report,
+        file_name="tender_analysis_report.txt",
         mime="text/plain",
     )
 
@@ -554,7 +719,7 @@ if uploaded_files:
                             )
                         if run_status.status == "completed":
                             break
-                        time.sleep(1)
+                        time.sleep(0.5)  # Reduced polling interval
                     spinner_placeholder.empty()
 
                     messages = openai.beta.threads.messages.list(thread_id=thread_id)
@@ -567,12 +732,7 @@ if uploaded_files:
                         "No response generated.",
                     )
 
-                assistant_response = re.sub(
-                    r"【.*?】", replace_citations, assistant_response
-                )
-                assistant_response = re.sub(r'"tmp\w+\.pdf"', "", assistant_response)
-                # Remove asterisks from chat response as well
-                assistant_response = re.sub(r"\*(.*?)\*", r"\1", assistant_response)
+                assistant_response = replace_citations(assistant_response)
                 st.session_state.chat_history.append(
                     {"user": user_query, "assistant": assistant_response}
                 )
