@@ -473,19 +473,25 @@ if uploaded_files:
     def replace_citations(text):
         def replace_citation(match):
             citation = match.group(0)
+            # Extract the file ID or temporary filename from the citation
+            for file_id, original_name in file_id_to_name.items():
+                # Check if the citation contains the file ID or the temporary filename
+                if file_id in citation or any(
+                    temp_name in citation
+                    for temp_name in [f"tmp{file_id}.pdf", f'"{file_id}"']
+                ):
+                    return f"【{original_name}】"
+            # If there's only one file, use its name as a fallback
             if len(file_id_to_name) == 1:
                 return f"【{list(file_id_to_name.values())[0]}】"
-            for file_id, original_name in file_id_to_name.items():
-                if file_id in citation:
-                    return f"【{original_name}】"
-            return (
-                f"【{list(file_id_to_name.values())[0]}】"
-                if file_id_to_name
-                else citation
-            )
+            return citation
 
+        # Replace citations in the format 【...】 and temporary filenames
         text = re.sub(r"【.*?】", replace_citation, text)
-        text = re.sub(r'"tmp\w+\.pdf"', "", text)
+        # Replace any remaining temporary filenames (e.g., tmpp4z2s6xe.pdf)
+        for file_id, original_name in file_id_to_name.items():
+            text = re.sub(rf"tmp\w+\.pdf", original_name, text)
+            text = re.sub(rf'"{file_id}"', original_name, text)
         text = re.sub(r"\*(.*?)\*", r"\1", text)  # Remove single asterisks
         return text
 
