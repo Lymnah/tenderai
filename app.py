@@ -504,9 +504,10 @@ if uploaded_files:
         current_task = 0
         progress_log_messages = []
 
-        def update_progress(progress, message):
+        def update_progress(message):
             nonlocal current_task, progress_log_messages
             current_task += 1
+            progress = current_task / total_tasks
             progress_bar.progress(progress)
             status_text.text(message)
             progress_log_messages.append(f"[{time.strftime('%H:%M:%S')}] {message}")
@@ -535,15 +536,11 @@ if uploaded_files:
             If no dates are found, state: "No important dates found in [file name]."
             """
             dates_response = run_prompt(
-                [file_id],
-                dates_prompt,
-                f"Dates for {file_name}",
-                update_progress,
-                total_tasks,
-                current_task,
+                [file_id], dates_prompt, f"Dates for {file_name}"
             )
             dates_response = replace_citations(dates_response)
             all_dates.append(dates_response)
+            update_progress(f"Completed Dates for {file_name}")
 
             requirements_prompt = """
             Extract the technical requirements from the provided tender document. Categorize the requirements as follows:
@@ -557,15 +554,11 @@ if uploaded_files:
             Format the output with clear headings for each category.
             """
             requirements_response = run_prompt(
-                [file_id],
-                requirements_prompt,
-                f"Requirements for {file_name}",
-                update_progress,
-                total_tasks,
-                current_task,
+                [file_id], requirements_prompt, f"Requirements for {file_name}"
             )
             requirements_response = replace_citations(requirements_response)
             all_requirements.append(requirements_response)
+            update_progress(f"Completed Requirements for {file_name}")
 
             folder_structure_prompt = """
             Extract the required folder structure for tender submission from the provided document. Include the following details:
@@ -580,15 +573,11 @@ if uploaded_files:
             Ensure the output is accurate and does not include any hallucinated information.
             """
             folder_structure_response = run_prompt(
-                [file_id],
-                folder_structure_prompt,
-                f"Folder Structure for {file_name}",
-                update_progress,
-                total_tasks,
-                current_task,
+                [file_id], folder_structure_prompt, f"Folder Structure for {file_name}"
             )
             folder_structure_response = replace_citations(folder_structure_response)
             all_folder_structures.append(folder_structure_response)
+            update_progress(f"Completed Folder Structure for {file_name}")
 
         summary_prompt = """
         Provide a holistic summary of the tender based on all the provided documents. Focus on what the client is asking for, including:
@@ -599,14 +588,10 @@ if uploaded_files:
         Synthesize the information from all files to create a cohesive summary. Cite the source files where relevant. Format the output as a concise paragraph (150-200 words).
         """
         summary_response = run_prompt(
-            uploaded_file_ids,
-            summary_prompt,
-            "Tender Summary",
-            update_progress,
-            total_tasks,
-            current_task,
+            uploaded_file_ids, summary_prompt, "Tender Summary"
         )
         summary_response = replace_citations(summary_response)
+        update_progress("Completed Tender Summary")
 
         return all_dates, all_requirements, all_folder_structures, summary_response
 
