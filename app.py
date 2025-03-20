@@ -528,6 +528,8 @@ if uploaded_files:
         for file_id in uploaded_file_ids:
             file_name = file_id_to_name[file_id]
 
+            # Dates extraction
+            update_progress(f"Looking for dates in {file_name}...")
             dates_prompt = """
             Extract all important dates, milestones, and deadlines from the provided tender document. Include the following details for each date:
             - The specific date and time (if available).
@@ -545,6 +547,8 @@ if uploaded_files:
             all_dates.append(dates_response)
             update_progress(f"Completed Dates for {file_name}")
 
+            # Requirements extraction
+            update_progress(f"Looking for requirements in {file_name}...")
             requirements_prompt = """
             Extract the technical requirements from the provided tender document. Categorize the requirements as follows:
             - Mandatory Requirements: List all requirements that must be met.
@@ -563,6 +567,8 @@ if uploaded_files:
             all_requirements.append(requirements_response)
             update_progress(f"Completed Requirements for {file_name}")
 
+            # Folder structure extraction
+            update_progress(f"Looking for folder structure in {file_name}...")
             folder_structure_prompt = """
             Extract the required folder structure for tender submission from the provided document. Include the following details:
             - The exact folder and subfolder structure as specified in the tender.
@@ -582,6 +588,8 @@ if uploaded_files:
             all_folder_structures.append(folder_structure_response)
             update_progress(f"Completed Folder Structure for {file_name}")
 
+        # Summary extraction
+        update_progress("Generating tender summary...")
         summary_prompt = """
         Provide a holistic summary of the tender based on all the provided documents. Focus on what the client is asking for, including:
         - The overall purpose of the tender.
