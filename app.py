@@ -475,23 +475,20 @@ if uploaded_files:
             citation = match.group(0)
             # Extract the file ID or temporary filename from the citation
             for file_id, original_name in file_id_to_name.items():
-                # Check if the citation contains the file ID or the temporary filename
-                if file_id in citation or any(
-                    temp_name in citation
-                    for temp_name in [f"tmp{file_id}.pdf", f'"{file_id}"']
-                ):
+                if file_id in citation:
                     return f"【{original_name}】"
             # If there's only one file, use its name as a fallback
             if len(file_id_to_name) == 1:
                 return f"【{list(file_id_to_name.values())[0]}】"
             return citation
 
-        # Replace citations in the format 【...】 and temporary filenames
+        # Replace citations in the format 【...】
         text = re.sub(r"【.*?】", replace_citation, text)
-        # Replace any remaining temporary filenames (e.g., tmpp4z2s6xe.pdf)
+        # Replace temporary filenames (e.g., tmpp4z2s6xe.pdf) with original filenames
         for file_id, original_name in file_id_to_name.items():
-            text = re.sub(rf"tmp\w+\.pdf", original_name, text)
-            text = re.sub(rf'"{file_id}"', original_name, text)
+            # Map temporary filenames back to original names
+            temp_filename_pattern = rf"tmp\w+\.pdf"
+            text = re.sub(temp_filename_pattern, original_name, text)
         text = re.sub(r"\*(.*?)\*", r"\1", text)  # Remove single asterisks
         return text
 
@@ -598,6 +595,13 @@ if uploaded_files:
         )
         summary_response = replace_citations(summary_response)
         update_progress("Completed Tender Summary")
+
+        # Delete the files from OpenAI after all tasks are complete
+        for file_id in uploaded_file_ids:
+            try:
+                openai.files.delete(file_id)
+            except Exception as e:
+                st.warning(f"Failed to delete file {file_id}: {str(e)}")
 
         return all_dates, all_requirements, all_folder_structures, summary_response
 
