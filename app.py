@@ -18,15 +18,6 @@ if not OPENAI_API_KEY:
 
 openai.api_key = OPENAI_API_KEY
 
-# # Retrieve existing assistants
-# assistants = openai.beta.assistants.list()
-# if assistants.data:
-#     print("Existing assistants:")
-#     for assistant in assistants.data:
-#         print(f"Name: {assistant.name}, ID: {assistant.id}")
-# else:
-#     print("No assistants found. You may need to create one.")
-
 # Use an existing Assistant ID from environment variable
 ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
 if not ASSISTANT_ID:
@@ -52,32 +43,22 @@ if uploaded_files:
 
     # Upload files to OpenAI
     for file in uploaded_files:
-        file_extension = os.path.splitext(file.name)[
-            1
-        ]  # Extracts the extension (e.g., .pdf, .docx)
-
-        # Ensure the file extension is one of the supported types
-        if file_extension.lower() not in [
-            ".pdf",
-            ".docx",
-            ".txt",
-            ".csv",
-            ".json",
-            ".html",
-            ".md",
-        ]:
-            st.error(f"❌ Type de fichier non supporté : {file_extension}")
+        # Determine the file extension
+        file_extension = os.path.splitext(file.name)[1]
+        if file_extension not in [".pdf", ".docx"]:
+            st.error(f"Unsupported file type: {file_extension}")
             continue
 
+        # Write the file to a temporary location with the correct extension
         with tempfile.NamedTemporaryFile(
             delete=False, suffix=file_extension
         ) as temp_file:
             temp_file.write(file.getvalue())
-            temp_file_path = temp_file.name  # Now retains the correct extension
+            temp_file_path = temp_file.name
 
-        uploaded_file = openai.files.create(
-            file=open(temp_file_path, "rb"), purpose="assistants"
-        )
+        # Upload the file to OpenAI
+        with open(temp_file_path, "rb") as f:
+            uploaded_file = openai.files.create(file=f, purpose="assistants")
         uploaded_file_ids.append(uploaded_file.id)
 
     # Create a new thread
@@ -90,13 +71,11 @@ if uploaded_files:
             openai.beta.threads.messages.create(
                 thread_id=thread_id,
                 role="user",
-                content="Voici un document à analyser.",
+                content="What is the submission deadline & format? What is the exact deadline and time zone? Is submission online, by email, or printed? Are there specific templates or document structures required?",
                 attachments=[
                     {"file_id": file_id, "tools": [{"type": "file_search"}]},
                 ],
             )
-
-        print(thread.tool_resources.file_search)
 
         # Start the assistant run
         run = openai.beta.threads.runs.create(
@@ -121,12 +100,28 @@ if uploaded_files:
                 print(f"Unexpected run status: {run_status.status}")
             time.sleep(2)  # Prevent excessive API calls
 
+        # Check run completion status
+        st.write(f"✅ Run Status: {run_status.status}")
+
+        if run_status.status != "completed":
+            st.error("L'analyse n'a pas pu se terminer correctement.")
+            st.stop()
+
         # Retrieve messages
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
-        response_text = next(
-            (msg.content.text for msg in messages.data if hasattr(msg.content, "text")),
-            "Aucune réponse générée.",
-        )
+
+        # Get only assistant responses
+        assistant_responses = [msg for msg in messages.data if msg.role == "assistant"]
+
+        if not assistant_responses:
+            response_text = "Aucune réponse générée."
+        else:
+            response_text = "\n".join(
+                content.text.value
+                for msg in assistant_responses
+                for content in msg.content
+                if content.type == "text"
+            )
 
         # Display analysis
         st.subheader("📊 Résultats de l'analyse")
