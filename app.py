@@ -501,16 +501,19 @@ if uploaded_files:
     progress_log = st.empty()
 
     def analyze_documents():
+        # Double the total tasks to account for both "Looking for..." and "Completed..." updates
         total_tasks = (
             len(uploaded_file_ids) * 3 + 1
-        )  # 3 tasks per file + 1 summary task
+        ) * 2  # 3 tasks per file + 1 summary, 2 updates per task
         current_task = 0
         progress_log_messages = []
 
         def update_progress(message):
             nonlocal current_task, progress_log_messages
             current_task += 1
-            progress = current_task / total_tasks
+            progress = min(
+                current_task / total_tasks, 1.0
+            )  # Clamp progress to [0.0, 1.0]
             progress_bar.progress(progress)
             status_text.text(message)
             progress_log_messages.append(f"[{time.strftime('%H:%M:%S')}] {message}")
