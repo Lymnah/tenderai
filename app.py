@@ -90,9 +90,6 @@ if uploaded_files:
                 for file_id in uploaded_file_ids
             ],
         )
-        st.write(
-            f"Message sent with attachments: {json.dumps(message.to_dict(), indent=2)}"
-        )
 
         # Start the assistant run
         run = openai.beta.threads.runs.create(
@@ -121,9 +118,6 @@ if uploaded_files:
 
         # Retrieve messages
         messages = openai.beta.threads.messages.list(thread_id=thread_id)
-        st.write(
-            f"Raw messages: {json.dumps([msg.to_dict() for msg in messages.data], indent=2)}"
-        )
 
         # Get assistant responses
         assistant_responses = [msg for msg in messages.data if msg.role == "assistant"]
@@ -136,22 +130,24 @@ if uploaded_files:
                 for content in msg.content
                 if content.type == "text"
             )
-            st.write(f"Raw response text before citation replacement: {response_text}")
 
             # Replace citations with original filenames
             def replace_citations(match):
-                citation = match.group(0)  # e.g., 【4:1†source】
-                # If there's only one file, assume all citations refer to it
-                if len(file_id_to_name) == 1:
-                    return f"【{list(file_id_to_name.values())[0]}】"
-                # Otherwise, try to match file_id if present in citation
-                for file_id, original_name in file_id_to_name.items():
-                    if file_id in citation:
-                        return f"【{original_name}】"
-                # Fallback: Replace "source" with the first file name if no match
+                citation = match.group(0)  # e.g., 【4:1†tmpgzpckhpi.pdf】
+                for msg in assistant_responses:
+                    for content in msg.content:
+                        if content.type == "text":
+                            for annotation in content.text.annotations:
+                                if (
+                                    annotation.text == citation
+                                    and annotation.type == "file_citation"
+                                ):
+                                    file_id = annotation.file_citation.file_id
+                                    return f"【{file_id_to_name.get(file_id, 'Unknown File')}】"
+                # Fallback to first file if no match
                 return (
                     f"【{list(file_id_to_name.values())[0]}】"
-                    if "source" in citation
+                    if file_id_to_name
                     else citation
                 )
 
