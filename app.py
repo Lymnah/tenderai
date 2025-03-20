@@ -9,26 +9,31 @@ import re
 import PyPDF2
 from io import BytesIO
 
+# Global variable to toggle simulation mode
+SIMULATION_MODE = (
+    True  # Set to True to use mock responses, False to use real OpenAI API
+)
+
 # Load environment variables
 dotenv.load_dotenv()
 
-# Load API Key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    st.error(
-        "⚠️ OpenAI API Key is missing! Please set `OPENAI_API_KEY` in your environment variables."
-    )
-    st.stop()
+# Load API Key (only required if not in simulation mode)
+if not SIMULATION_MODE:
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+    if not OPENAI_API_KEY:
+        st.error(
+            "⚠️ OpenAI API Key is missing! Please set `OPENAI_API_KEY` in your environment variables."
+        )
+        st.stop()
+    openai.api_key = OPENAI_API_KEY
 
-openai.api_key = OPENAI_API_KEY
-
-# Use an existing Assistant ID from environment variable
-ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
-if not ASSISTANT_ID:
-    st.error(
-        "⚠️ Assistant ID is missing! Set `OPENAI_ASSISTANT_ID` in your environment variables."
-    )
-    st.stop()
+    # Use an existing Assistant ID from environment variable
+    ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
+    if not ASSISTANT_ID:
+        st.error(
+            "⚠️ Assistant ID is missing! Set `OPENAI_ASSISTANT_ID` in your environment variables."
+        )
+        st.stop()
 
 # Streamlit UI
 st.set_page_config(page_title="INOX Tender AI", layout="wide")
@@ -112,8 +117,19 @@ st.title("📄 INOX Tender AI - Assistance aux Appels d'Offres")
 # Dictionary to map file IDs to original filenames
 file_id_to_name = {}
 
+
+# Mock response function
+def load_mock_response():
+    try:
+        with open("mock_response.txt", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        st.error("Mock response file 'mock_response.txt' not found.")
+        return "No response generated."
+
+
 if uploaded_files:
-    # Upload files to OpenAI and store file ID mapping with a loading indicator
+    # Upload files to OpenAI (or simulate) and store file ID mapping with a loading indicator
     uploaded_file_ids = []
     failed_uploads = []
     total_files = len(uploaded_files)
@@ -145,33 +161,43 @@ if uploaded_files:
                 failed_uploads.append(file.name)
                 continue
 
-            # Create temporary file
-            temp_file_path = None
-            try:
-                with tempfile.NamedTemporaryFile(
-                    delete=False, suffix=file_extension
-                ) as temp_file:
-                    temp_file.write(file.getvalue())
-                    temp_file_path = temp_file.name
+            if SIMULATION_MODE:
+                # Simulate upload time (2 seconds)
+                time.sleep(1)
+                # Mock file ID
+                mock_file_id = f"mock_file_id_{i}"
+                uploaded_file_ids.append(mock_file_id)
+                file_id_to_name[mock_file_id] = file.name
+            else:
+                # Create temporary file
+                temp_file_path = None
+                try:
+                    with tempfile.NamedTemporaryFile(
+                        delete=False, suffix=file_extension
+                    ) as temp_file:
+                        temp_file.write(file.getvalue())
+                        temp_file_path = temp_file.name
 
-                with open(temp_file_path, "rb") as f:
-                    uploaded_file = openai.files.create(file=f, purpose="assistants")
-                    uploaded_file_ids.append(uploaded_file.id)
-                    file_id_to_name[uploaded_file.id] = file.name
-
-            except Exception as e:
-                st.error(f"Failed to upload file {file.name}: {str(e)}")
-                failed_uploads.append(file.name)
-                continue
-            finally:
-                # Clean up temporary file
-                if temp_file_path and os.path.exists(temp_file_path):
-                    try:
-                        os.remove(temp_file_path)
-                    except Exception as e:
-                        st.warning(
-                            f"Failed to clean up temporary file {temp_file_path}: {str(e)}"
+                    with open(temp_file_path, "rb") as f:
+                        uploaded_file = openai.files.create(
+                            file=f, purpose="assistants"
                         )
+                        uploaded_file_ids.append(uploaded_file.id)
+                        file_id_to_name[uploaded_file.id] = file.name
+
+                except Exception as e:
+                    st.error(f"Failed to upload file {file.name}: {str(e)}")
+                    failed_uploads.append(file.name)
+                    continue
+                finally:
+                    # Clean up temporary file
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try:
+                            os.remove(temp_file_path)
+                        except Exception as e:
+                            st.warning(
+                                f"Failed to clean up temporary file {temp_file_path}: {str(e)}"
+                            )
 
         # Clear the status text and progress bar
         status_text.empty()
@@ -188,83 +214,91 @@ if uploaded_files:
 
     # Create a new thread with analysis spinner
     with st.spinner("Analyzing documents..."):
-        thread = openai.beta.threads.create()
-        thread_id = thread.id
-
-        # Attach files and send query
-        query = """
-        Extract the following details from the uploaded tender document:
-        1. Submission deadline (date and time) and time zone (infer if not specified, e.g., CET/CEST for Swiss documents).
-        2. Submission method (online, email, or printed, including exact address and labeling instructions).
-        3. Submission format (paper, electronic, specific templates, etc., with all requirements).
-        4. Any required document structures or templates (list all annexes and specifications).
-        Provide a detailed response with all relevant information, including additional notes (e.g., tender validity, evaluation criteria), and cite the source file explicitly.
-        """
-        openai.beta.threads.messages.create(
-            thread_id=thread_id,
-            role="user",
-            content=query,
-            attachments=[
-                {"file_id": file_id, "tools": [{"type": "file_search"}]}
-                for file_id in uploaded_file_ids
-            ],
-        )
-
-        # Start the assistant run
-        run = openai.beta.threads.runs.create(
-            thread_id=thread_id,
-            assistant_id=ASSISTANT_ID.strip(),
-            tools=[{"type": "file_search"}],
-        )
-
-        # Poll for completion with a single spinner
-        spinner_placeholder = st.empty()
-        while True:
-            run_status = openai.beta.threads.runs.retrieve(
-                thread_id=thread_id, run_id=run.id
-            )
-            with spinner_placeholder.container():
-                st.spinner(f"Analyzing documents... (Status: {run_status.status})")
-            if run_status.status == "completed":
-                break
-            elif run_status.status in ["failed", "cancelled"]:
-                st.error(f"Analysis failed with status: {run_status.status}")
-                st.stop()
-            time.sleep(2)
-        spinner_placeholder.empty()
-
-        # Retrieve messages
-        messages = openai.beta.threads.messages.list(thread_id=thread_id)
-        assistant_responses = [msg for msg in messages.data if msg.role == "assistant"]
-        if not assistant_responses:
-            response_text = "No response generated."
+        if SIMULATION_MODE:
+            # Simulate analysis time (3 seconds)
+            time.sleep(1)
+            thread_id = "mock_thread_id"
+            response_text = load_mock_response()
         else:
-            response_text = "\n".join(
-                content.text.value
-                for msg in assistant_responses
-                for content in msg.content
-                if content.type == "text"
+            thread = openai.beta.threads.create()
+            thread_id = thread.id
+
+            # Attach files and send query
+            query = """
+            Extract the following details from the uploaded tender document:
+            1. Submission deadline (date and time) and time zone (infer if not specified, e.g., CET/CEST for Swiss documents).
+            2. Submission method (online, email, or printed, including exact address and labeling instructions).
+            3. Submission format (paper, electronic, specific templates, etc., with all requirements).
+            4. Any required document structures or templates (list all annexes and specifications).
+            Provide a detailed response with all relevant information, including additional notes (e.g., tender validity, evaluation criteria), and cite the source file explicitly.
+            """
+            openai.beta.threads.messages.create(
+                thread_id=thread_id,
+                role="user",
+                content=query,
+                attachments=[
+                    {"file_id": file_id, "tools": [{"type": "file_search"}]}
+                    for file_id in uploaded_file_ids
+                ],
             )
 
-            # Replace citations with original filenames
-            def replace_citations(match):
-                citation = match.group(0)
-                if len(file_id_to_name) == 1:
-                    return f"【{list(file_id_to_name.values())[0]}】"
-                for file_id, original_name in file_id_to_name.items():
-                    if file_id in citation:
-                        return f"【{original_name}】"
-                return (
-                    f"【{list(file_id_to_name.values())[0]}】"
-                    if file_id_to_name
-                    else citation
+            # Start the assistant run
+            run = openai.beta.threads.runs.create(
+                thread_id=thread_id,
+                assistant_id=ASSISTANT_ID.strip(),
+                tools=[{"type": "file_search"}],
+            )
+
+            # Poll for completion with a single spinner
+            spinner_placeholder = st.empty()
+            while True:
+                run_status = openai.beta.threads.runs.retrieve(
+                    thread_id=thread_id, run_id=run.id
+                )
+                with spinner_placeholder.container():
+                    st.spinner(f"Analyzing documents... (Status: {run_status.status})")
+                if run_status.status == "completed":
+                    break
+                elif run_status.status in ["failed", "cancelled"]:
+                    st.error(f"Analysis failed with status: {run_status.status}")
+                    st.stop()
+                time.sleep(1)
+            spinner_placeholder.empty()
+
+            # Retrieve messages
+            messages = openai.beta.threads.messages.list(thread_id=thread_id)
+            assistant_responses = [
+                msg for msg in messages.data if msg.role == "assistant"
+            ]
+            if not assistant_responses:
+                response_text = "No response generated."
+            else:
+                response_text = "\n".join(
+                    content.text.value
+                    for msg in assistant_responses
+                    for content in msg.content
+                    if content.type == "text"
                 )
 
-            response_text = re.sub(r"【.*?】", replace_citations, response_text)
-            response_text = re.sub(r'"tmp\w+\.pdf"', "", response_text)
+        # Replace citations with original filenames
+        def replace_citations(match):
+            citation = match.group(0)
+            if len(file_id_to_name) == 1:
+                return f"【{list(file_id_to_name.values())[0]}】"
+            for file_id, original_name in file_id_to_name.items():
+                if file_id in citation:
+                    return f"【{original_name}】"
+            return (
+                f"【{list(file_id_to_name.values())[0]}】"
+                if file_id_to_name
+                else citation
+            )
 
-            # Remove single asterisks used for italicization
-            response_text = re.sub(r"\*(.*?)\*", r"\1", response_text)
+        response_text = re.sub(r"【.*?】", replace_citations, response_text)
+        response_text = re.sub(r'"tmp\w+\.pdf"', "", response_text)
+
+        # Remove single asterisks used for italicization
+        response_text = re.sub(r"\*(.*?)\*", r"\1", response_text)
 
     # Display analysis with proper formatting
     st.subheader("📊 Analysis Results")
@@ -338,33 +372,45 @@ else:
         if submit_button and user_query.strip():
             # Streamline loading indicator for chat as well
             spinner_placeholder = st.empty()
-            openai.beta.threads.messages.create(
-                thread_id=thread_id, role="user", content=user_query
-            )
-            run = openai.beta.threads.runs.create(
-                thread_id=thread_id,
-                assistant_id=ASSISTANT_ID.strip(),
-            )
-            while True:
-                run_status = openai.beta.threads.runs.retrieve(
-                    thread_id=thread_id, run_id=run.id
-                )
+            if SIMULATION_MODE:
+                # Simulate chat response time (1 seconds)
                 with spinner_placeholder.container():
-                    st.spinner(f"Generating response... (Status: {run_status.status})")
-                if run_status.status == "completed":
-                    break
-                time.sleep(2)
-            spinner_placeholder.empty()
+                    st.spinner("Generating response... (Status: mock)")
+                time.sleep(1)
+                assistant_response = (
+                    "This is a mock chat response to your query: " + user_query
+                )
+            else:
+                openai.beta.threads.messages.create(
+                    thread_id=thread_id, role="user", content=user_query
+                )
+                run = openai.beta.threads.runs.create(
+                    thread_id=thread_id,
+                    assistant_id=ASSISTANT_ID.strip(),
+                )
+                while True:
+                    run_status = openai.beta.threads.runs.retrieve(
+                        thread_id=thread_id, run_id=run.id
+                    )
+                    with spinner_placeholder.container():
+                        st.spinner(
+                            f"Generating response... (Status: {run_status.status})"
+                        )
+                    if run_status.status == "completed":
+                        break
+                    time.sleep(1)
+                spinner_placeholder.empty()
 
-            messages = openai.beta.threads.messages.list(thread_id=thread_id)
-            assistant_response = next(
-                (
-                    msg.content[0].text.value
-                    for msg in messages.data
-                    if msg.role == "assistant"
-                ),
-                "No response generated.",
-            )
+                messages = openai.beta.threads.messages.list(thread_id=thread_id)
+                assistant_response = next(
+                    (
+                        msg.content[0].text.value
+                        for msg in messages.data
+                        if msg.role == "assistant"
+                    ),
+                    "No response generated.",
+                )
+
             assistant_response = re.sub(
                 r"【.*?】", replace_citations, assistant_response
             )
