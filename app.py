@@ -99,9 +99,15 @@ st.title("📄 INOX Tender AI - Assistance aux Appels d'Offres")
 file_id_to_name = {}
 
 if uploaded_files:
-    # Upload files to OpenAI and store file ID mapping
+    # Upload files to OpenAI and store file ID mapping with a loading indicator
+    upload_placeholder = st.empty()
+    with upload_placeholder.container():
+        st.spinner("Uploading files to process...")
+
     uploaded_file_ids = []
-    for file in uploaded_files:
+    for i, file in enumerate(uploaded_files):
+        with upload_placeholder.container():
+            st.spinner(f"Uploading file {i+1} of {len(uploaded_files)}: {file.name}...")
         file_extension = os.path.splitext(file.name)[1]
         if file_extension not in [".pdf", ".docx"]:
             st.error(f"Unsupported file type: {file_extension}")
@@ -114,11 +120,18 @@ if uploaded_files:
             temp_file_path = temp_file.name
 
         with open(temp_file_path, "rb") as f:
-            uploaded_file = openai.files.create(file=f, purpose="assistants")
-            uploaded_file_ids.append(uploaded_file.id)
-            file_id_to_name[uploaded_file.id] = file.name
+            try:
+                uploaded_file = openai.files.create(file=f, purpose="assistants")
+                uploaded_file_ids.append(uploaded_file.id)
+                file_id_to_name[uploaded_file.id] = file.name
+            except Exception as e:
+                st.error(f"Failed to upload file {file.name}: {str(e)}")
+                continue
 
-    # Create a new thread
+    # Clear the upload spinner
+    upload_placeholder.empty()
+
+    # Create a new thread with analysis spinner
     with st.spinner("Analyzing documents..."):
         thread = openai.beta.threads.create()
         thread_id = thread.id
@@ -203,7 +216,6 @@ if uploaded_files:
     with st.expander("Details from the Tender Document:", expanded=True):
         # Split response into sections based on numbered headings
         sections = re.split(r"(\d+\.\s+[^:]+:)", response_text)
-        previous_was_heading = False
         for i in range(len(sections)):
             section = sections[i].strip()
             if not section:
@@ -217,21 +229,9 @@ if uploaded_files:
                     f"<div class='section-heading'>{section}</div>",
                     unsafe_allow_html=True,
                 )
-                previous_was_heading = True
             else:
-                # Apply bullets to items within the section, skipping empty lines
-                lines = section.split("\n")
-                for line in lines:
-                    line = line.strip()
-                    if line:  # Only process non-empty lines
-                        if previous_was_heading:
-                            st.markdown("")  # Add spacing after heading
-                            previous_was_heading = False
-                        if line.startswith("-"):
-                            st.markdown(f"{line}", unsafe_allow_html=False)
-                        else:
-                            st.markdown(f"- {line}", unsafe_allow_html=False)
-                    # Do not add st.markdown("") here to avoid empty bullets
+                # Render the section content as-is, preserving the assistant's Markdown formatting
+                st.markdown(section, unsafe_allow_html=False)
 
         # Remove redundant "Citations:" section if it exists
         response_lines = response_text.split("\n")
