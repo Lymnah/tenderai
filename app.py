@@ -55,6 +55,17 @@ st.markdown(
     hr { border: 1px solid #444; margin: 20px 0; }
     .section-heading { font-size: 20px; margin-bottom: 10px; }
     .spinner-text { font-size: 16px; color: #d3d3d3; }
+    .stSpinner {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .stSpinner > div {
+        font-size: 16px;
+        color: #d3d3d3;
+        margin-top: 10px;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -74,6 +85,9 @@ with st.sidebar:
         # File Upload Feedback: Display a preview of the first page of the PDF
         st.subheader("🔍 File Preview")
         for file in uploaded_files:
+            if file.size > 200 * 1024 * 1024:  # 200MB in bytes
+                st.error(f"File {file.name} exceeds the 200MB limit.")
+                continue
             if file.name.endswith(".pdf"):
                 try:
                     pdf_reader = PyPDF2.PdfReader(BytesIO(file.getvalue()))
@@ -100,36 +114,77 @@ file_id_to_name = {}
 
 if uploaded_files:
     # Upload files to OpenAI and store file ID mapping with a loading indicator
-    upload_placeholder = st.empty()
-    with upload_placeholder.container():
-        st.spinner("Uploading files to process...")
-
     uploaded_file_ids = []
-    for i, file in enumerate(uploaded_files):
-        with upload_placeholder.container():
-            st.spinner(f"Uploading file {i+1} of {len(uploaded_files)}: {file.name}...")
-        file_extension = os.path.splitext(file.name)[1]
-        if file_extension not in [".pdf", ".docx"]:
-            st.error(f"Unsupported file type: {file_extension}")
-            continue
+    failed_uploads = []
+    total_files = len(uploaded_files)
 
-        with tempfile.NamedTemporaryFile(
-            delete=False, suffix=file_extension
-        ) as temp_file:
-            temp_file.write(file.getvalue())
-            temp_file_path = temp_file.name
+    # Use a single spinner for the entire upload process
+    with st.spinner(""):
+        # Placeholder for dynamic status text
+        status_text = st.empty()
+        # Progress bar for visual feedback
+        progress_bar = st.progress(0)
 
-        with open(temp_file_path, "rb") as f:
-            try:
-                uploaded_file = openai.files.create(file=f, purpose="assistants")
-                uploaded_file_ids.append(uploaded_file.id)
-                file_id_to_name[uploaded_file.id] = file.name
-            except Exception as e:
-                st.error(f"Failed to upload file {file.name}: {str(e)}")
+        for i, file in enumerate(uploaded_files):
+            # Update status text
+            file_size = (
+                f"{file.size / 1024:.1f}KB"
+                if file.size < 1024 * 1024
+                else f"{file.size / (1024 * 1024):.1f}MB"
+            )
+            status_text.text(
+                f"Uploading file {i+1} of {total_files}: {file.name} ({file_size})..."
+            )
+
+            # Update progress bar
+            progress_bar.progress((i + 1) / total_files)
+
+            file_extension = os.path.splitext(file.name)[1]
+            if file_extension not in [".pdf", ".docx"]:
+                st.error(f"Unsupported file type: {file_extension}")
+                failed_uploads.append(file.name)
                 continue
 
-    # Clear the upload spinner
-    upload_placeholder.empty()
+            # Create temporary file
+            temp_file_path = None
+            try:
+                with tempfile.NamedTemporaryFile(
+                    delete=False, suffix=file_extension
+                ) as temp_file:
+                    temp_file.write(file.getvalue())
+                    temp_file_path = temp_file.name
+
+                with open(temp_file_path, "rb") as f:
+                    uploaded_file = openai.files.create(file=f, purpose="assistants")
+                    uploaded_file_ids.append(uploaded_file.id)
+                    file_id_to_name[uploaded_file.id] = file.name
+
+            except Exception as e:
+                st.error(f"Failed to upload file {file.name}: {str(e)}")
+                failed_uploads.append(file.name)
+                continue
+            finally:
+                # Clean up temporary file
+                if temp_file_path and os.path.exists(temp_file_path):
+                    try:
+                        os.remove(temp_file_path)
+                    except Exception as e:
+                        st.warning(
+                            f"Failed to clean up temporary file {temp_file_path}: {str(e)}"
+                        )
+
+        # Clear the status text and progress bar
+        status_text.empty()
+        progress_bar.empty()
+
+    # Display summary of failed uploads, if any
+    if failed_uploads:
+        st.warning(
+            f"Successfully uploaded {len(uploaded_file_ids)} out of {total_files} file(s). "
+            f"Failed to upload: {', '.join(failed_uploads)}"
+        )
+    else:
+        st.success(f"Successfully uploaded all {total_files} file(s) to OpenAI.")
 
     # Create a new thread with analysis spinner
     with st.spinner("Analyzing documents..."):
