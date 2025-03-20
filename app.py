@@ -8,6 +8,7 @@ import json
 import re
 import PyPDF2
 from io import BytesIO
+import base64
 
 # Global variable to toggle simulation mode
 SIMULATION_MODE = (
@@ -42,24 +43,97 @@ st.set_page_config(page_title="INOX Tender AI", layout="wide")
 st.markdown(
     """
 <style>
-    .stTextArea textarea { border: 2px solid #007bff; border-radius: 5px; }
-    .stButton button { background-color: #007bff; color: white; border-radius: 5px; padding: 10px 20px; font-size: 16px; }
-    .stButton button:hover { background-color: #0056b3; }
-    .stDownloadButton button { background-color: #28a745; color: white; border-radius: 5px; padding: 10px 20px; font-size: 16px; }
-    .stDownloadButton button:hover { background-color: #218838; }
-    .analysis-section { margin-bottom: 20px; }
-    .chat-message { padding: 10px; border-radius: 5px; margin-bottom: 10px; }
-    .user-message { background-color: #e9ecef; }
-    .assistant-message { background-color: #d1e7ff; }
-    .st-expander { margin-bottom: 20px; background-color: #2a2a2a; border-radius: 5px; padding: 10px; }
-    .st-expander div { padding: 10px; }
-    .stMarkdown { margin-bottom: 15px; font-size: 16px; color: #d3d3d3; }
-    h1 { font-size: 28px; color: #ffffff; }
-    h2 { font-size: 22px; color: #ffffff; }
-    h3 { font-size: 18px; color: #ffffff; }
-    hr { border: 1px solid #444; margin: 20px 0; }
-    .section-heading { font-size: 20px; margin-bottom: 10px; }
-    .spinner-text { font-size: 16px; color: #d3d3d3; }
+    .stTextArea textarea { 
+        border: 2px solid #007bff; 
+        border-radius: 5px; 
+        background-color: #2a2a2a; 
+        color: #d3d3d3; 
+    }
+    .stButton button { 
+        background-color: #007bff; 
+        color: white; 
+        border-radius: 5px; 
+        padding: 10px 20px; 
+        font-size: 16px; 
+        transition: background-color 0.3s ease; 
+    }
+    .stButton button:hover { 
+        background-color: #0056b3; 
+    }
+    .stDownloadButton button { 
+        background-color: #28a745; 
+        color: white; 
+        border-radius: 5px; 
+        padding: 10px 20px; 
+        font-size: 16px; 
+        transition: background-color 0.3s ease; 
+    }
+    .stDownloadButton button:hover { 
+        background-color: #218838; 
+    }
+    .analysis-section { 
+        margin-bottom: 20px; 
+    }
+    .chat-message { 
+        padding: 15px; 
+        border-radius: 8px; 
+        margin-bottom: 15px; 
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
+    }
+    .user-message { 
+        background-color: #3a3a3a; 
+        color: #d3d3d3; 
+    }
+    .assistant-message { 
+        background-color: #007bff; 
+        color: white; 
+    }
+    .st-expander { 
+        margin-bottom: 20px; 
+        background-color: #2a2a2a; 
+        border-radius: 8px; 
+        padding: 15px; 
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); 
+    }
+    .st-expander div { 
+        padding: 10px; 
+    }
+    .stMarkdown { 
+        margin-bottom: 15px; 
+        font-size: 16px; 
+        color: #d3d3d3; 
+        line-height: 1.6; 
+    }
+    h1 { 
+        font-size: 32px; 
+        color: #ffffff; 
+        text-align: center; 
+        margin-bottom: 20px; 
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5); 
+    }
+    h2 { 
+        font-size: 24px; 
+        color: #ffffff; 
+        margin-top: 30px; 
+    }
+    h3 { 
+        font-size: 20px; 
+        color: #ffffff; 
+    }
+    hr { 
+        border: 1px solid #444; 
+        margin: 20px 0; 
+    }
+    .section-heading { 
+        font-size: 20px; 
+        margin-bottom: 10px; 
+        color: #007bff; 
+        font-weight: bold; 
+    }
+    .spinner-text { 
+        font-size: 16px; 
+        color: #d3d3d3; 
+    }
     .stSpinner {
         display: flex;
         justify-content: center;
@@ -71,13 +145,95 @@ st.markdown(
         color: #d3d3d3;
         margin-top: 10px;
     }
+    /* Sidebar styling */
+    .sidebar .sidebar-content {
+        background-color: #1a1a1a;
+        padding: 20px 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+    /* Sidebar logo container */
+    .sidebar-logo-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        margin-top: 0px;
+    }
+    .sidebar-logo {
+        max-height: 50px; /* Slightly smaller for sidebar */
+    }
+    /* File uploader styling */
+    .stFileUploader {
+        background-color: #2a2a2a;
+        border: 2px dashed #007bff;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+    }
+    .stFileUploader div {
+        color: #d3d3d3;
+    }
+    /* Success and error messages */
+    .stSuccess {
+        background-color: #1a3c34;
+        color: #a3d9b1;
+        border-radius: 5px;
+        padding: 10px;
+    }
+    .stError {
+        background-color: #4a1a1a;
+        color: #ff9999;
+        border-radius: 5px;
+        padding: 10px;
+    }
+    .stWarning {
+        background-color: #4a3c1a;
+        color: #ffcc99;
+        border-radius: 5px;
+        padding: 10px;
+    }
 </style>
 """,
     unsafe_allow_html=True,
 )
 
+
+# Function to load and encode image as base64
+def load_image_as_base64(image_path):
+    try:
+        with open(image_path, "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode()
+        return f"data:image/png;base64,{encoded}"
+    except FileNotFoundError:
+        st.error(
+            f"Image file {image_path} not found. Please ensure it is in the same directory as app.py."
+        )
+        return None
+
+
+# Load logos
+your_company_logo = load_image_as_base64("your_company_logo.png")
+client_company_logo = load_image_as_base64("client_company_logo.png")
+
 # Sidebar
 with st.sidebar:
+    # Display logos at the top of the sidebar
+    if your_company_logo and client_company_logo:
+        st.markdown(
+            f"""
+            <div class="sidebar-logo-container">
+                <img src="{your_company_logo}" class="sidebar-logo" alt="Your Company Logo">
+                <img src="{client_company_logo}" class="sidebar-logo" alt="Client Company Logo">
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.warning(
+            "One or both logos could not be loaded. Please check the file paths."
+        )
+
     st.header("📂 Upload Documents")
     uploaded_files = st.file_uploader(
         "Add your documents (PDF, DOCX)",
@@ -112,7 +268,7 @@ with st.sidebar:
                 )
 
 # Main Content
-st.title("📄 INOX Tender AI - Assistance aux Appels d'Offres")
+st.title("INOX Tender AI - Assistance aux Appels d'Offres")
 
 # Dictionary to map file IDs to original filenames
 file_id_to_name = {}
@@ -301,8 +457,8 @@ if uploaded_files:
         response_text = re.sub(r"\*(.*?)\*", r"\1", response_text)
 
     # Display analysis with proper formatting
-    st.subheader("📊 Analysis Results")
-    with st.expander("Details from the Tender Document:", expanded=True):
+    st.subheader("📊 Résultats des Analyses")
+    with st.expander("Détail:", expanded=True):
         # Split response into sections based on numbered headings
         sections = re.split(r"(\d+\.\s+[^:]+:)", response_text)
         for i in range(len(sections)):
@@ -342,82 +498,82 @@ if uploaded_files:
         mime="text/plain",
     )
 
-# Chat Interface
-st.subheader("💬 Chat with Assistant")
-if "thread_id" not in locals():
-    st.info("Please upload and analyze a document first.")
-else:
-    # Initialize chat history
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
+    # Chat Interface
+    st.subheader("💬 Chat with Assistant")
+    if "thread_id" not in locals():
+        st.info("Please upload and analyze a document first.")
+    else:
+        # Initialize chat history
+        if "chat_history" not in st.session_state:
+            st.session_state.chat_history = []
 
-    # Display chat history
-    for chat in st.session_state.chat_history:
-        st.markdown(
-            f"<div class='chat-message user-message'><strong>You:</strong> {chat['user']}</div>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"<div class='chat-message assistant-message'><strong>Assistant:</strong> {chat['assistant']}</div>",
-            unsafe_allow_html=True,
-        )
+        # Display chat history
+        for chat in st.session_state.chat_history:
+            st.markdown(
+                f"<div class='chat-message user-message'><strong>You:</strong> {chat['user']}</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"<div class='chat-message assistant-message'><strong>Assistant:</strong> {chat['assistant']}</div>",
+                unsafe_allow_html=True,
+            )
 
-    # Chat input form
-    with st.form(key="chat_form"):
-        user_query = st.text_area(
-            "Ask a question about the analyzed documents:", height=100
-        )
-        submit_button = st.form_submit_button("Send")
+        # Chat input form
+        with st.form(key="chat_form"):
+            user_query = st.text_area(
+                "Ask a question about the analyzed documents:", height=100
+            )
+            submit_button = st.form_submit_button("Send")
 
-        if submit_button and user_query.strip():
-            # Streamline loading indicator for chat as well
-            spinner_placeholder = st.empty()
-            if SIMULATION_MODE:
-                # Simulate chat response time (1 seconds)
-                with spinner_placeholder.container():
-                    st.spinner("Generating response... (Status: mock)")
-                time.sleep(1)
-                assistant_response = (
-                    "This is a mock chat response to your query: " + user_query
-                )
-            else:
-                openai.beta.threads.messages.create(
-                    thread_id=thread_id, role="user", content=user_query
-                )
-                run = openai.beta.threads.runs.create(
-                    thread_id=thread_id,
-                    assistant_id=ASSISTANT_ID.strip(),
-                )
-                while True:
-                    run_status = openai.beta.threads.runs.retrieve(
-                        thread_id=thread_id, run_id=run.id
-                    )
+            if submit_button and user_query.strip():
+                # Streamline loading indicator for chat as well
+                spinner_placeholder = st.empty()
+                if SIMULATION_MODE:
+                    # Simulate chat response time (1 seconds)
                     with spinner_placeholder.container():
-                        st.spinner(
-                            f"Generating response... (Status: {run_status.status})"
-                        )
-                    if run_status.status == "completed":
-                        break
+                        st.spinner("Generating response... (Status: mock)")
                     time.sleep(1)
-                spinner_placeholder.empty()
+                    assistant_response = (
+                        "This is a mock chat response to your query: " + user_query
+                    )
+                else:
+                    openai.beta.threads.messages.create(
+                        thread_id=thread_id, role="user", content=user_query
+                    )
+                    run = openai.beta.threads.runs.create(
+                        thread_id=thread_id,
+                        assistant_id=ASSISTANT_ID.strip(),
+                    )
+                    while True:
+                        run_status = openai.beta.threads.runs.retrieve(
+                            thread_id=thread_id, run_id=run.id
+                        )
+                        with spinner_placeholder.container():
+                            st.spinner(
+                                f"Generating response... (Status: {run_status.status})"
+                            )
+                        if run_status.status == "completed":
+                            break
+                        time.sleep(1)
+                    spinner_placeholder.empty()
 
-                messages = openai.beta.threads.messages.list(thread_id=thread_id)
-                assistant_response = next(
-                    (
-                        msg.content[0].text.value
-                        for msg in messages.data
-                        if msg.role == "assistant"
-                    ),
-                    "No response generated.",
+                    messages = openai.beta.threads.messages.list(thread_id=thread_id)
+                    assistant_response = next(
+                        (
+                            msg.content[0].text.value
+                            for msg in messages.data
+                            if msg.role == "assistant"
+                        ),
+                        "No response generated.",
+                    )
+
+                assistant_response = re.sub(
+                    r"【.*?】", replace_citations, assistant_response
                 )
-
-            assistant_response = re.sub(
-                r"【.*?】", replace_citations, assistant_response
-            )
-            assistant_response = re.sub(r'"tmp\w+\.pdf"', "", assistant_response)
-            # Remove asterisks from chat response as well
-            assistant_response = re.sub(r"\*(.*?)\*", r"\1", assistant_response)
-            st.session_state.chat_history.append(
-                {"user": user_query, "assistant": assistant_response}
-            )
-            st.rerun()  # Refresh to show updated chat history
+                assistant_response = re.sub(r'"tmp\w+\.pdf"', "", assistant_response)
+                # Remove asterisks from chat response as well
+                assistant_response = re.sub(r"\*(.*?)\*", r"\1", assistant_response)
+                st.session_state.chat_history.append(
+                    {"user": user_query, "assistant": assistant_response}
+                )
+                st.rerun()  # Refresh to show updated chat history
