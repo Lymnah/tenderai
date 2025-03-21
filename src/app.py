@@ -57,7 +57,6 @@ with st.sidebar:
                     pdf_reader = PyPDF2.PdfReader(BytesIO(file.getvalue()))
                     first_page = pdf_reader.pages[0]
                     text = first_page.extract_text()
-                    print(text)
                     st.text_area(
                         f"Preview of {file.name}:",
                         text[:1000] + "..." if len(text) > 1000 else text,
