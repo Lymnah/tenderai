@@ -1,2 +1,5 @@
-/env
+env/
 .env
+*.pyc
+src/utils.py
+.DS_Store
