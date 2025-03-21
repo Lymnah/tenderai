@@ -22,6 +22,9 @@ def run_prompt(
         thread = openai.beta.threads.create()
         thread_id = thread.id
 
+        # Log the file_ids being sent
+        print(f"Sending prompt for {task_name} with file_ids: {file_ids}")
+
         openai.beta.threads.messages.create(
             thread_id=thread_id,
             role="user",
