@@ -14,6 +14,8 @@ st.set_page_config(page_title="INOX Tender AI", layout="wide")
 # Apply custom CSS
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
+st.title("INOX Tender AI - Assistance aux Appels d'Offres")
+
 # Render the sidebar directly in app.py
 with st.sidebar:
     your_company_logo = load_image_as_base64("resources/your_company_logo.png")

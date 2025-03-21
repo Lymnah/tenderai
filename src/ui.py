@@ -10,11 +10,9 @@ import openai
 
 
 def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thread_id):
-    st.title("INOX Tender AI - Assistance aux Appels d'Offres")
-
     if uploaded_files:
         # Analysis with enhanced feedback
-        st.subheader("Analyzing Documents...")
+        subheader_analysis = st.subheader("Analyzing Documents...")
 
         # Progress bar and status log
         progress_bar = st.progress(0)
@@ -32,33 +30,35 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
         )
 
         # Clear the progress indicators
+        progress_bar.empty()
         status_text.empty()
         progress_log.empty()
+        subheader_analysis.empty()
 
         # Display Results in Dedicated Sections
-        st.subheader("📊 Tender Analysis Results")
+        st.header("📊 Tender Analysis Results", divider=True)
+
+        # Tender Summary Section
+        st.subheader("📝 Tender Summary")
+        with st.expander("View Tender Summary", expanded=True):
+            st.markdown(summary_response, unsafe_allow_html=False)
 
         # Important Dates Section
-        st.markdown("### 🕒 Important Dates and Milestones")
+        st.subheader("🕒 Important Dates and Milestones")
         with st.expander("View Dates and Milestones", expanded=True):
             for dates in all_dates:
                 st.markdown(dates, unsafe_allow_html=False)
                 st.markdown("<hr>", unsafe_allow_html=True)
 
-        # Tender Summary Section
-        st.markdown("### 📝 Tender Summary")
-        with st.expander("View Tender Summary", expanded=True):
-            st.markdown(summary_response, unsafe_allow_html=False)
-
         # Technical Requirements Section
-        st.markdown("### 🔧 Technical Requirements")
+        st.subheader("🔧 Technical Requirements")
         with st.expander("View Technical Requirements", expanded=True):
             for requirements in all_requirements:
                 st.markdown(requirements, unsafe_allow_html=False)
                 st.markdown("<hr>", unsafe_allow_html=True)
 
         # Folder Structure Section
-        st.markdown("### 📁 Required Folder Structure")
+        st.subheader("🕒 Important Dates and Milestones")
         with st.expander("View Folder Structure", expanded=True):
             for folder_structure in all_folder_structures:
                 st.markdown(folder_structure, unsafe_allow_html=False)

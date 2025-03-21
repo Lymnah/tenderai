@@ -88,7 +88,5 @@ def upload_files(uploaded_files):
             f"Successfully uploaded {len(uploaded_file_ids)} out of {total_files} file(s). "
             f"Failed to upload: {', '.join(failed_uploads)}"
         )
-    else:
-        st.success(f"Successfully uploaded all {total_files} file(s) to OpenAI.")
 
     return uploaded_file_ids, file_id_to_name

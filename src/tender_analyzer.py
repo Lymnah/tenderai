@@ -60,7 +60,6 @@ def run_prompt(
             for content in msg.content
             if content.type == "text"
         )
-        # Log the raw response for debugging
         return response
 
 
