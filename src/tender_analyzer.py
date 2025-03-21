@@ -186,12 +186,15 @@ def analyze_tender(
     # Summary extraction
     update_progress(current_task / total_tasks, "Generating tender summary...")
     summary_prompt = """
-    Provide a holistic summary of the tender based on all the provided documents. Focus on what the client is asking for, including:
-    - The overall purpose of the tender.
-    - The main deliverables or services required.
-    - Any key objectives or priorities mentioned.
-    - A brief overview of the scope and scale of the project.
-    Synthesize the information from all files to create a cohesive summary. Cite the source files where relevant. Format the output as a concise paragraph (150-200 words).
+    Provide a holistic summary of the tender based on all the provided documents. Focus on the following aspects and present them as a structured list with bullet points:
+    - **Purpose**: The overall purpose of the tender.
+    - **Main Deliverables**: The main deliverables or services required.
+    - **Key Objectives**: Any key objectives or priorities mentioned.
+    - **Scope and Scale**: A brief overview of the scope and scale of the project.
+    - **Key Dates**: Important dates or deadlines (e.g., submission deadline, contract signing).
+    - **Submission Requirements**: Key requirements for submitting the offer (e.g., documents, format).
+    Cite the source files where relevant, using the format [file name] after each bullet point where applicable. If a bullet point applies to multiple files, consolidate the citations into a single reference at the end of the bullet point. Do not repeat the same citation multiple times for the same point.
+    Format the output as a concise list (150-200 words total), with each bullet point on a new line.
     """
     summary_response = run_prompt(uploaded_file_ids, summary_prompt, "Tender Summary")
     summary_response = replace_citations(summary_response, file_id_to_name)

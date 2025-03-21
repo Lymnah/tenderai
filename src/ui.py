@@ -7,6 +7,7 @@ import time
 from utils import replace_citations
 from tender_analyzer import analyze_tender
 import openai
+import re
 
 
 def clean_dates_response(response, file_name):
@@ -34,6 +35,36 @@ def clean_dates_response(response, file_name):
     return "\n".join(cleaned_lines)
 
 
+def clean_summary_response(response):
+    """Clean up the summary response by consolidating repeated citations."""
+    # Find all citations in the format 【file_name】
+    citations = re.findall(r"【.*?】", response)
+    if not citations:
+        return response
+
+    # Get unique citations
+    unique_citations = []
+    seen = set()
+    for citation in citations:
+        if citation not in seen:
+            unique_citations.append(citation)
+            seen.add(citation)
+
+    # Remove all citations from the response
+    response_without_citations = re.sub(r"【.*?】", "", response).strip()
+
+    # Add consolidated citations at the end
+    if unique_citations:
+        consolidated_citations = " ".join(unique_citations)
+        response = (
+            f"{response_without_citations}\n\n**Sources:** {consolidated_citations}"
+        )
+    else:
+        response = response_without_citations
+
+    return response
+
+
 def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thread_id):
     if uploaded_files:
         # Create tabs for Results and Progress Log at the start
@@ -41,11 +72,7 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
 
         # Tab 1: Results (initially empty, will be populated after analysis)
         with tab1:
-            st.header("📊 Tender Analysis Results", divider=True)
             results_placeholder = st.empty()
-            results_placeholder.info(
-                "Analysis results will appear here once processing is complete."
-            )
 
         # Tab 2: Progress Log
         with tab2:
@@ -79,11 +106,17 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
 
         # Populate the Results tab with analysis results
         with tab1:
+            st.header("📊 Tender Analysis Results", divider=True)
+            results_placeholder.info(
+                "Analysis results will appear here once processing is complete."
+            )
             results_placeholder.empty()  # Clear the placeholder message
             # Tender Summary Section
             st.subheader("📝 Tender Summary")
             with st.expander("View Tender Summary", expanded=True):
-                st.markdown(summary_response, unsafe_allow_html=False)
+                # Clean up the summary response
+                cleaned_summary = clean_summary_response(summary_response)
+                st.markdown(cleaned_summary, unsafe_allow_html=False)
 
             # Important Dates Section
             st.subheader("🕒 Important Dates and Milestones")
@@ -176,7 +209,7 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
             full_report = (
                 "Tender Analysis Report\n\n"
                 "## Important Dates and Milestones\n" + consolidated_dates + "\n\n"
-                "## Tender Summary\n" + summary_response + "\n\n"
+                "## Tender Summary\n" + cleaned_summary + "\n\n"
                 "## Technical Requirements\n" + consolidated_requirements + "\n\n"
                 "## Required Folder Structure\n" + consolidated_folder_structure
             )
