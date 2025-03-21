@@ -54,12 +54,17 @@ def run_prompt(
         assistant_responses = [msg for msg in messages.data if msg.role == "assistant"]
         if not assistant_responses:
             return "No response generated."
-        response = "\n".join(
-            content.text.value
-            for msg in assistant_responses
-            for content in msg.content
-            if content.type == "text"
-        )
+
+        # Extract text content and log non-text content
+        response_parts = []
+        for msg in assistant_responses:
+            for content in msg.content:
+                if content.type == "text":
+                    response_parts.append(content.text.value)
+                else:
+                    print(f"Non-text content found in {task_name}: {content.type}")
+        response = "\n".join(response_parts)
+
         return response
 
 
