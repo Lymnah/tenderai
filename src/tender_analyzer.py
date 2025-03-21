@@ -65,6 +65,9 @@ def run_prompt(
                     print(f"Non-text content found in {task_name}: {content.type}")
         response = "\n".join(response_parts)
 
+        # Log the raw response for debugging
+        print(f"Raw OpenAI response for {task_name}:\n{response}\n---")
+
         return response
 
 
@@ -106,11 +109,11 @@ def analyze_tender(
         dates_prompt = """
         Extract all important dates, milestones, and deadlines from the provided tender document. Include the following details for each date:
         - The specific date and time (if available).
-        - The time zone (infer if not specified, e.g., CET/CEST for Swiss documents).
+        - The time zone (if available).
         - The purpose or event associated with the date (e.g., submission deadline, site visit, contract start).
         - The source file where the date was found (cite explicitly).
         Format the output as a list, with each entry in the format:
-        - Date: [date and time], Time Zone: [time zone], Event: [event], Source: [file name]
+        - [date and time], [time zone], [event], Source: [file name]
         If no dates are found, state: "No important dates found in [file name]."
         """
         dates_response = run_prompt([file_id], dates_prompt, f"Dates for {file_name}")

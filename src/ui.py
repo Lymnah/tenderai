@@ -7,6 +7,46 @@ import time
 from utils import replace_citations
 from tender_analyzer import analyze_tender
 import openai
+import re
+
+
+# unsued for now
+def clean_dates_response(dates_response, file_name):
+    """Clean up the dates response by removing redundant 'No other important dates' messages."""
+    # Split the response into lines
+    lines = dates_response.split("\n")
+    cleaned_lines = []
+    seen_events = set()
+    no_dates_found = False
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        # Check for "No important dates found"
+        if "No important dates found" in line:
+            no_dates_found = True
+            continue
+        # Check for date entries
+        if line.startswith("- Date:"):
+            # Extract the event to check for duplicates
+            event_match = re.search(r"Event: (.*?)(?:, Source:|$)", line)
+            if event_match:
+                event = event_match.group(1).strip()
+                if event in seen_events:
+                    continue  # Skip duplicate events
+                seen_events.add(event)
+            cleaned_lines.append(line)
+        elif not (
+            "No other important dates were found" in line
+            or "Important Dates from Tender Document:" in line
+        ):
+            # Include other lines (e.g., additional details about an event)
+            cleaned_lines.append(line)
+
+    if not cleaned_lines and no_dates_found:
+        return f"No important dates found in {file_name}."
+    return "\n".join(cleaned_lines)
 
 
 def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thread_id):
@@ -46,31 +86,67 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
         # Important Dates Section
         st.subheader("🕒 Important Dates and Milestones")
         with st.expander("View Dates and Milestones", expanded=True):
-            for dates in all_dates:
-                st.markdown(dates, unsafe_allow_html=False)
-                st.markdown("<hr>", unsafe_allow_html=True)
+            if not all_dates:
+                st.markdown("No important dates found in any of the provided files.")
+            else:
+                consolidated_dates = "Consolidated Important Dates and Milestones:\n\n"
+                for i, file_id in enumerate(uploaded_file_ids):
+                    file_name = file_id_to_name[file_id]
+                    dates_response = all_dates[i]
+                    if dates_response.strip():
+                        consolidated_dates += f"Dates from {file_name}:\n"
+                        consolidated_dates += dates_response + "\n\n---\n\n"
+                st.markdown(consolidated_dates, unsafe_allow_html=False)
 
         # Technical Requirements Section
         st.subheader("🔧 Technical Requirements")
         with st.expander("View Technical Requirements", expanded=True):
-            for requirements in all_requirements:
-                st.markdown(requirements, unsafe_allow_html=False)
-                st.markdown("<hr>", unsafe_allow_html=True)
+            if not all_requirements:
+                st.markdown(
+                    "No technical requirements found in any of the provided files."
+                )
+            else:
+                consolidated_requirements = "Consolidated Technical Requirements:\n\n"
+                for i, file_id in enumerate(uploaded_file_ids):
+                    file_name = file_id_to_name[file_id]
+                    requirements_response = all_requirements[i]
+                    if requirements_response.strip():
+                        consolidated_requirements += f"Requirements from {file_name}:\n"
+                        consolidated_requirements += (
+                            requirements_response + "\n\n---\n\n"
+                        )
+                st.markdown(consolidated_requirements, unsafe_allow_html=False)
 
         # Folder Structure Section
-        st.subheader("🕒 Important Dates and Milestones")
+        st.subheader("📁 Required Folder Structure")
         with st.expander("View Folder Structure", expanded=True):
-            for folder_structure in all_folder_structures:
-                st.markdown(folder_structure, unsafe_allow_html=False)
-                st.markdown("<hr>", unsafe_allow_html=True)
+            if not all_folder_structures:
+                st.markdown(
+                    "No folder structure specified in any of the provided files."
+                )
+            else:
+                consolidated_folder_structure = (
+                    "Consolidated Folder Structure for Tender Submission:\n\n"
+                )
+                for i, file_id in enumerate(uploaded_file_ids):
+                    file_name = file_id_to_name[file_id]
+                    folder_structure_response = all_folder_structures[i]
+                    if folder_structure_response.strip():
+                        consolidated_folder_structure += (
+                            f"Folder Structure from {file_name}:\n"
+                        )
+                        consolidated_folder_structure += (
+                            folder_structure_response + "\n\n---\n\n"
+                        )
+                st.markdown(consolidated_folder_structure, unsafe_allow_html=False)
 
         # Download Full Report
         full_report = (
             "Tender Analysis Report\n\n"
-            "## Important Dates and Milestones\n" + "\n\n".join(all_dates) + "\n\n"
+            "## Important Dates and Milestones\n" + consolidated_dates + "\n\n"
             "## Tender Summary\n" + summary_response + "\n\n"
-            "## Technical Requirements\n" + "\n\n".join(all_requirements) + "\n\n"
-            "## Required Folder Structure\n" + "\n\n".join(all_folder_structures)
+            "## Technical Requirements\n" + consolidated_requirements + "\n\n"
+            "## Required Folder Structure\n" + consolidated_folder_structure
         )
         st.download_button(
             "📥 Download Full Report",

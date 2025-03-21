@@ -11,7 +11,7 @@ def load_image_as_base64(image_path):
         return f"data:image/png;base64,{encoded}"
     except FileNotFoundError:
         st.error(
-            f"Image file {image_path} not found. Please ensure it is in the same directory as app.py."
+            f"Image file {image_path} not found. Please ensure it is in the resources/ directory."
         )
         return None
 
@@ -49,10 +49,9 @@ def replace_citations(text, file_id_to_name):
 
     # Replace citations in the format 【...】
     text = re.sub(r"【.*?】", replace_citation, text)
-    # Replace temporary filenames (e.g., tmpp4z2s6xe.pdf) with original filenames
+    # Replace temporary filenames (e.g., tmplgazt62r.docx) with original filenames
     for file_id, original_name in file_id_to_name.items():
-        # Map temporary filenames back to original names
-        temp_filename_pattern = rf"tmp\w+\.pdf"
+        temp_filename_pattern = rf"tmp\w+\.(?:pdf|docx)"
         text = re.sub(temp_filename_pattern, original_name, text)
     text = re.sub(r"\*(.*?)\*", r"\1", text)  # Remove single asterisks
     return text
