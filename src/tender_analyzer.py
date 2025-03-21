@@ -75,7 +75,11 @@ def run_prompt(
 
 
 def analyze_tender(
-    uploaded_file_ids, file_id_to_name, progress_bar, status_text, progress_log
+    uploaded_file_ids,
+    file_id_to_name,
+    progress_bar,
+    status_text,
+    progress_log_placeholder,
 ):
     # Double the total tasks to account for both "Looking for..." and "Completed..." updates
     total_tasks = (
@@ -91,7 +95,8 @@ def analyze_tender(
         progress_bar.progress(progress)
         status_text.text(message)
         progress_log_messages.append(f"[{time.strftime('%H:%M:%S')}] {message}")
-        progress_log.markdown(
+        # Update the progress log in the placeholder
+        progress_log_placeholder.markdown(
             "<div class='progress-log'>"
             + "<br>".join(progress_log_messages)
             + "</div>",
@@ -109,15 +114,19 @@ def analyze_tender(
         update_progress(
             current_task / total_tasks, f"Looking for dates in {file_name}..."
         )
-        dates_prompt = """
-        Extract all important dates, milestones, and deadlines from the provided tender document. Include the following details for each date:
-        - The specific date and time (if available).
-        - The time zone (if available).
-        - The purpose or event associated with the date (e.g., submission deadline, site visit, contract start).
-        - The source file where the date was found (cite explicitly).
-        Format the output as a list, with each entry in the format:
+        dates_prompt = f"""
+        You are processing the file "{file_name}". This is the only file you should analyze for this task. Do not reference or consider any other files. Extract all important dates, milestones, and deadlines from this tender document. Include the following details for each entry:
+        - The specific date and time (if available, otherwise state "No specific time mentioned").
+        - The time zone (infer if not specified, e.g., CET/CEST for Swiss documents; if unable to infer, state "No specific time zone provided").
+        - The purpose or event associated with the date or milestone (e.g., submission deadline, site visit, contract start).
+        - The source file where the information was found (cite explicitly as "{file_name}").
+        Format the output as a list, with each entry on a new line, strictly in the format:
         - [date and time], [time zone], [event], Source: [file name]
-        If no dates are found, state: "No important dates found in [file name]."
+        For example:
+        - 21.04.2021, No specific time zone provided, Deadline for submitting questions, Source: {file_name}
+        - 30.04.2021 at 12:00, No specific time zone provided, Deadline for submitting offers, Source: {file_name}
+        Each date must be on a separate line, and the format must be followed exactly. Do not combine dates into a single line or deviate from the specified format.
+        If no dates, milestones, or deadlines are found, state exactly: "No important dates, milestones, or deadlines found in {file_name}." and nothing else. Do not include this message if any dates are found.
         """
         dates_response = run_prompt([file_id], dates_prompt, f"Dates for {file_name}")
         dates_response = replace_citations(dates_response, file_id_to_name)
@@ -136,7 +145,7 @@ def analyze_tender(
         - Financial Requirements: List any financial requirements (e.g., budget, payment terms).
         - Security Requirements: List any security-related requirements.
         - Certifications: List any required certifications or qualifications.
-        For each category, provide a detailed list of the requirements, citing the source file explicitly. If a category has no requirements, state: "[Category] requirements not found in [file name]."
+        For each category, provide a detailed list of the requirements. If a category has no requirements, state: "[Category] requirements not found in [file name]."
         Format the output with clear headings for each category.
         """
         requirements_response = run_prompt(
@@ -164,7 +173,7 @@ def analyze_tender(
         - Main Folder
           - Subfolder 1: [Document 1], [Document 2]
           - Subfolder 2: [Document 3]
-        If no folder structure is specified, state: "No folder structure specified in [file name]."
+        If no folder structure is specified, state: "No folder structure specified in {file_name}."
         Ensure the output is accurate and does not include any hallucinated information.
         """
         folder_structure_response = run_prompt(
@@ -181,12 +190,15 @@ def analyze_tender(
     # Summary extraction
     update_progress(current_task / total_tasks, "Generating tender summary...")
     summary_prompt = """
-    Provide a holistic summary of the tender based on all the provided documents. Focus on what the client is asking for, including:
-    - The overall purpose of the tender.
-    - The main deliverables or services required.
-    - Any key objectives or priorities mentioned.
-    - A brief overview of the scope and scale of the project.
-    Synthesize the information from all files to create a cohesive summary. Cite the source files where relevant. Format the output as a concise paragraph (150-200 words).
+    Provide a holistic summary of the tender based on all the provided documents. Focus on the following aspects and present them as a structured list with bullet points:
+    - **Purpose**: The overall purpose of the tender.
+    - **Main Deliverables**: The main deliverables or services required.
+    - **Key Objectives**: Any key objectives or priorities mentioned.
+    - **Scope and Scale**: A brief overview of the scope and scale of the project.
+    - **Key Dates**: Important dates or deadlines (e.g., submission deadline, contract signing).
+    - **Submission Requirements**: Key requirements for submitting the offer (e.g., documents, format).
+    Cite the source files where relevant, using the format [file name] after each bullet point where applicable. If a bullet point applies to multiple files, consolidate the citations into a single reference at the end of the bullet point. Do not repeat the same citation multiple times for the same point.
+    Format the output as a concise list (150-200 words total), with each bullet point on a new line.
     """
     summary_response = run_prompt(uploaded_file_ids, summary_prompt, "Tender Summary")
     summary_response = replace_citations(summary_response, file_id_to_name)
@@ -199,4 +211,10 @@ def analyze_tender(
         except Exception as e:
             st.warning(f"Failed to delete file {file_id}: {str(e)}")
 
-    return all_dates, all_requirements, all_folder_structures, summary_response
+    return (
+        all_dates,
+        all_requirements,
+        all_folder_structures,
+        summary_response,
+        progress_log_messages,
+    )

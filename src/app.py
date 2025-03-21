@@ -19,15 +19,13 @@ st.title("INOX Tender AI - Assistance aux Appels d'Offres")
 # Render the sidebar directly in app.py
 with st.sidebar:
     your_company_logo = load_image_as_base64("resources/your_company_logo.png")
-    client_company_logo = load_image_as_base64("resources/client_company_logo.png")
 
     # Display logos at the top of the sidebar
-    if your_company_logo and client_company_logo:
+    if your_company_logo:
         st.markdown(
             f"""
             <div class="sidebar-logo-container">
                 <img src="{your_company_logo}" class="sidebar-logo" alt="Your Company Logo">
-                <img src="{client_company_logo}" class="sidebar-logo" alt="Client Company Logo">
             </div>
             """,
             unsafe_allow_html=True,
@@ -57,7 +55,6 @@ with st.sidebar:
                     pdf_reader = PyPDF2.PdfReader(BytesIO(file.getvalue()))
                     first_page = pdf_reader.pages[0]
                     text = first_page.extract_text()
-                    print(text)
                     st.text_area(
                         f"Preview of {file.name}:",
                         text[:1000] + "..." if len(text) > 1000 else text,
