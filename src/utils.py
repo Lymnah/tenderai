@@ -35,7 +35,7 @@ def load_mock_response(prompt_type):
         return "No response generated."
 
 
-def replace_citations(text, file_id_to_name):
+def replace_citations(text, file_id_to_name, intended_file_name=None):
     def replace_citation(match):
         citation = match.group(0)
         # Extract the file ID or temporary filename from the citation
@@ -53,5 +53,13 @@ def replace_citations(text, file_id_to_name):
     for file_id, original_name in file_id_to_name.items():
         temp_filename_pattern = rf"tmp\w+\.(?:pdf|docx)"
         text = re.sub(temp_filename_pattern, original_name, text)
-    text = re.sub(r"\*(.*?)\*", r"\1", text)  # Remove single asterisks
+    # Remove single asterisks
+    text = re.sub(r"\*(.*?)\*", r"\1", text)
+
+    # If an intended file name is provided, replace any incorrect file references
+    if intended_file_name:
+        # Replace any mention of the wrong file name with the intended file name
+        for file_id, file_name in file_id_to_name.items():
+            if file_name != intended_file_name:
+                text = text.replace(file_name, intended_file_name)
     return text

@@ -7,45 +7,30 @@ import time
 from utils import replace_citations
 from tender_analyzer import analyze_tender
 import openai
-import re
 
 
-# unsued for now
-def clean_dates_response(dates_response, file_name):
-    """Clean up the dates response by removing redundant 'No other important dates' messages."""
-    # Split the response into lines
-    lines = dates_response.split("\n")
+def clean_dates_response(response, file_name):
+    """Clean up the dates response by consolidating 'No important dates found' messages."""
+    lines = response.split("\n")
     cleaned_lines = []
-    seen_events = set()
-    no_dates_found = False
+    seen_no_dates = False
+    no_dates_message = (
+        f"\nNo important dates, milestones, or deadlines found in {file_name}."
+    )
 
     for line in lines:
         line = line.strip()
         if not line:
             continue
-        # Check for "No important dates found"
-        if "No important dates found" in line:
-            no_dates_found = True
+        # Check for "No important dates found" messages
+        if "No important dates" in line:
+            if not seen_no_dates:
+                cleaned_lines.append(no_dates_message)
+                seen_no_dates = True
             continue
-        # Check for date entries
-        if line.startswith("- Date:"):
-            # Extract the event to check for duplicates
-            event_match = re.search(r"Event: (.*?)(?:, Source:|$)", line)
-            if event_match:
-                event = event_match.group(1).strip()
-                if event in seen_events:
-                    continue  # Skip duplicate events
-                seen_events.add(event)
-            cleaned_lines.append(line)
-        elif not (
-            "No other important dates were found" in line
-            or "Important Dates from Tender Document:" in line
-        ):
-            # Include other lines (e.g., additional details about an event)
-            cleaned_lines.append(line)
+        # Include other lines (e.g., actual date entries or additional details)
+        cleaned_lines.append(line)
 
-    if not cleaned_lines and no_dates_found:
-        return f"No important dates found in {file_name}."
     return "\n".join(cleaned_lines)
 
 
@@ -89,13 +74,22 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
             if not all_dates:
                 st.markdown("No important dates found in any of the provided files.")
             else:
-                consolidated_dates = "Consolidated Important Dates and Milestones:\n\n"
                 for i, file_id in enumerate(uploaded_file_ids):
                     file_name = file_id_to_name[file_id]
                     dates_response = all_dates[i]
                     if dates_response.strip():
-                        consolidated_dates += f"Dates from {file_name}:\n"
-                        consolidated_dates += dates_response + "\n\n---\n\n"
+                        # Fix incorrect file references
+                        dates_response = replace_citations(
+                            dates_response,
+                            file_id_to_name,
+                            intended_file_name=file_name,
+                        )
+                        # Clean up repeated "No important dates found" messages
+                        cleaned_response = clean_dates_response(
+                            dates_response, file_name
+                        )
+                        consolidated_dates = f"Dates from {file_name}:\n"
+                        consolidated_dates += cleaned_response + "\n\n---\n\n"
                 st.markdown(consolidated_dates, unsafe_allow_html=False)
 
         # Technical Requirements Section
@@ -106,12 +100,17 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
                     "No technical requirements found in any of the provided files."
                 )
             else:
-                consolidated_requirements = "Consolidated Technical Requirements:\n\n"
                 for i, file_id in enumerate(uploaded_file_ids):
                     file_name = file_id_to_name[file_id]
                     requirements_response = all_requirements[i]
                     if requirements_response.strip():
-                        consolidated_requirements += f"Requirements from {file_name}:\n"
+                        # Fix incorrect file references
+                        requirements_response = replace_citations(
+                            requirements_response,
+                            file_id_to_name,
+                            intended_file_name=file_name,
+                        )
+                        consolidated_requirements = f"Requirements from {file_name}:\n"
                         consolidated_requirements += (
                             requirements_response + "\n\n---\n\n"
                         )
@@ -125,15 +124,18 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
                     "No folder structure specified in any of the provided files."
                 )
             else:
-                consolidated_folder_structure = (
-                    "Consolidated Folder Structure for Tender Submission:\n\n"
-                )
                 for i, file_id in enumerate(uploaded_file_ids):
                     file_name = file_id_to_name[file_id]
                     folder_structure_response = all_folder_structures[i]
                     if folder_structure_response.strip():
-                        consolidated_folder_structure += (
-                            f"Folder Structure from {file_name}:\n"
+                        # Fix incorrect file references
+                        folder_structure_response = replace_citations(
+                            folder_structure_response,
+                            file_id_to_name,
+                            intended_file_name=file_name,
+                        )
+                        consolidated_folder_structure = (
+                            f"Folder Structure from {file_name}:\n\n"
                         )
                         consolidated_folder_structure += (
                             folder_structure_response + "\n\n---\n\n"
