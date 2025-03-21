@@ -61,7 +61,6 @@ def run_prompt(
             if content.type == "text"
         )
         # Log the raw response for debugging
-        print(f"Raw API response for {task_name}: {response}")
         return response
 
 
