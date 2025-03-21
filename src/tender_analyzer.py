@@ -75,7 +75,11 @@ def run_prompt(
 
 
 def analyze_tender(
-    uploaded_file_ids, file_id_to_name, progress_bar, status_text, progress_log
+    uploaded_file_ids,
+    file_id_to_name,
+    progress_bar,
+    status_text,
+    progress_log_placeholder,
 ):
     # Double the total tasks to account for both "Looking for..." and "Completed..." updates
     total_tasks = (
@@ -91,7 +95,8 @@ def analyze_tender(
         progress_bar.progress(progress)
         status_text.text(message)
         progress_log_messages.append(f"[{time.strftime('%H:%M:%S')}] {message}")
-        progress_log.markdown(
+        # Update the progress log in the placeholder
+        progress_log_placeholder.markdown(
             "<div class='progress-log'>"
             + "<br>".join(progress_log_messages)
             + "</div>",
@@ -136,7 +141,7 @@ def analyze_tender(
         - Financial Requirements: List any financial requirements (e.g., budget, payment terms).
         - Security Requirements: List any security-related requirements.
         - Certifications: List any required certifications or qualifications.
-        For each category, provide a detailed list of the requirements, citing the source file explicitly. If a category has no requirements, state: "[Category] requirements not found in [file name]."
+        For each category, provide a detailed list of the requirements. If a category has no requirements, state: "[Category] requirements not found in [file name]."
         Format the output with clear headings for each category.
         """
         requirements_response = run_prompt(
@@ -164,7 +169,7 @@ def analyze_tender(
         - Main Folder
           - Subfolder 1: [Document 1], [Document 2]
           - Subfolder 2: [Document 3]
-        If no folder structure is specified, state: "No folder structure specified in [file name]."
+        If no folder structure is specified, state: "No folder structure specified in {file_name}."
         Ensure the output is accurate and does not include any hallucinated information.
         """
         folder_structure_response = run_prompt(
@@ -199,4 +204,10 @@ def analyze_tender(
         except Exception as e:
             st.warning(f"Failed to delete file {file_id}: {str(e)}")
 
-    return all_dates, all_requirements, all_folder_structures, summary_response
+    return (
+        all_dates,
+        all_requirements,
+        all_folder_structures,
+        summary_response,
+        progress_log_messages,
+    )
