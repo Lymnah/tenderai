@@ -114,15 +114,19 @@ def analyze_tender(
         update_progress(
             current_task / total_tasks, f"Looking for dates in {file_name}..."
         )
-        dates_prompt = """
-        Extract all important dates, milestones, and deadlines from the provided tender document. Include the following details for each date:
-        - The specific date and time (if available).
-        - The time zone (if available).
-        - The purpose or event associated with the date (e.g., submission deadline, site visit, contract start).
-        - The source file where the date was found (cite explicitly).
-        Format the output as a list, with each entry in the format:
+        dates_prompt = f"""
+        You are processing the file "{file_name}". This is the only file you should analyze for this task. Do not reference or consider any other files. Extract all important dates, milestones, and deadlines from this tender document. Include the following details for each entry:
+        - The specific date and time (if available, otherwise state "No specific time mentioned").
+        - The time zone (infer if not specified, e.g., CET/CEST for Swiss documents; if unable to infer, state "No specific time zone provided").
+        - The purpose or event associated with the date or milestone (e.g., submission deadline, site visit, contract start).
+        - The source file where the information was found (cite explicitly as "{file_name}").
+        Format the output as a list, with each entry on a new line, strictly in the format:
         - [date and time], [time zone], [event], Source: [file name]
-        If no dates are found, state: "No important dates found in [file name]."
+        For example:
+        - 21.04.2021, No specific time zone provided, Deadline for submitting questions, Source: {file_name}
+        - 30.04.2021 at 12:00, No specific time zone provided, Deadline for submitting offers, Source: {file_name}
+        Each date must be on a separate line, and the format must be followed exactly. Do not combine dates into a single line or deviate from the specified format.
+        If no dates, milestones, or deadlines are found, state exactly: "No important dates, milestones, or deadlines found in {file_name}." and nothing else. Do not include this message if any dates are found.
         """
         dates_response = run_prompt([file_id], dates_prompt, f"Dates for {file_name}")
         dates_response = replace_citations(dates_response, file_id_to_name)

@@ -11,26 +11,60 @@ import re
 
 
 def clean_dates_response(response, file_name):
-    """Clean up the dates response by consolidating 'No important dates found' messages."""
+    """Clean up the dates response by removing 'No important dates found' if dates are present."""
     lines = response.split("\n")
     cleaned_lines = []
-    seen_no_dates = False
     no_dates_message = (
-        f"\nNo important dates, milestones, or deadlines found in {file_name}."
+        f"No important dates, milestones, or deadlines found in {file_name}."
     )
+    has_dates = False
 
+    # First pass: Check if there are any dates (lines that look like date entries)
     for line in lines:
         line = line.strip()
         if not line:
             continue
-        # Check for "No important dates found" messages
-        if "No important dates" in line:
-            if not seen_no_dates:
-                cleaned_lines.append(no_dates_message)
-                seen_no_dates = True
+        # Broadened regex to match various date formats:
+        # - DD.MM.YYYY (e.g., "21.04.2021")
+        # - YYYY-MM-DD (e.g., "2021-04-21")
+        # - Month DD, YYYY (e.g., "April 21, 2021")
+        # - Month YYYY (e.g., "May 2021")
+        # - DD Month YYYY (e.g., "21 April 2021")
+        if (
+            re.match(
+                r"^\d{2}\.\d{2}\.\d{4}|^\d{4}-\d{2}-\d{2}|^\w+\s+\d{1,2},\s+\d{4}|^\w+\s+\d{4}|^\d{1,2}\s+\w+\s+\d{4}",
+                line,
+            )
+            or "Source:" in line
+            or any(
+                keyword in line.lower()
+                for keyword in [
+                    "deadline",
+                    "milestone",
+                    "date",
+                    "schedule",
+                    "due",
+                    "submission",
+                    "contract",
+                ]
+            )
+        ):
+            has_dates = True
+            break
+
+    # Second pass: Build the cleaned response
+    for line in lines:
+        line = line.strip()
+        if not line:
             continue
-        # Include other lines (e.g., actual date entries or additional details)
+        # Skip "No important dates" message if dates were found
+        if no_dates_message in line and has_dates:
+            continue
         cleaned_lines.append(line)
+
+    # If no dates were found and the "No important dates" message is not already in the response, add it
+    if not has_dates and no_dates_message not in cleaned_lines:
+        cleaned_lines.append(no_dates_message)
 
     return "\n".join(cleaned_lines)
 
@@ -139,7 +173,7 @@ def render_main_content(uploaded_files, uploaded_file_ids, file_id_to_name, thre
                                 file_id_to_name,
                                 intended_file_name=file_name,
                             )
-                            # Clean up repeated "No important dates found" messages
+                            # Clean up "No important dates found" messages
                             cleaned_response = clean_dates_response(
                                 dates_response, file_name
                             )
