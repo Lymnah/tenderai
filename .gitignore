@@ -3,3 +3,4 @@ env/
 *.pyc
 src/utils.py
 .DS_Store
+logs/

@@ -36,30 +36,35 @@ def load_mock_response(prompt_type):
 
 
 def replace_citations(text, file_id_to_name, intended_file_name=None):
+    if not file_id_to_name:
+        return text  # Avoid processing if file_id_to_name is empty
+
     def replace_citation(match):
         citation = match.group(0)
-        # Extract the file ID or temporary filename from the citation
         for file_id, original_name in file_id_to_name.items():
             if file_id in citation:
                 return f"【{original_name}】"
-        # If there's only one file, use its name as a fallback
         if len(file_id_to_name) == 1:
             return f"【{list(file_id_to_name.values())[0]}】"
         return citation
 
     # Replace citations in the format 【...】
     text = re.sub(r"【.*?】", replace_citation, text)
-    # Replace temporary filenames (e.g., tmplgazt62r.docx) with original filenames
+
+    # Replace temporary filenames with more specificity
     for file_id, original_name in file_id_to_name.items():
         temp_filename_pattern = rf"tmp\w+\.(?:pdf|docx)"
-        text = re.sub(temp_filename_pattern, original_name, text)
-    # Remove single asterisks
-    text = re.sub(r"\*(.*?)\*", r"\1", text)
+        if re.search(temp_filename_pattern, text):
+            text = re.sub(temp_filename_pattern, original_name, text)
 
-    # If an intended file name is provided, replace any incorrect file references
+    # Optionally preserve asterisks or use a safer pattern
+    text = re.sub(r"\*(\w+)\*", r"\1", text)
+
+    # Correct file name references with word boundaries
     if intended_file_name:
-        # Replace any mention of the wrong file name with the intended file name
         for file_id, file_name in file_id_to_name.items():
             if file_name != intended_file_name:
-                text = text.replace(file_name, intended_file_name)
+                pattern = rf"\b{re.escape(file_name)}\b"
+                text = re.sub(pattern, intended_file_name, text)
+
     return text
