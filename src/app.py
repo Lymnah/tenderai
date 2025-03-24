@@ -55,16 +55,14 @@ if "uploader_key" not in st.session_state:
 if "new_files_to_process" not in st.session_state:
     st.session_state.new_files_to_process = []
 
-# Create tabs
-tab1, tab2, tab3 = st.tabs(["Upload File", "Analysis", "Logs"])
+# Create tabs with dynamic labels
+analysis_tab_label = "⏳ Analysis" if st.session_state.is_analyzing else "Analysis"
+tab1, tab2, tab3 = st.tabs(["Upload File", analysis_tab_label, "Logs"])
 
 # Tab 1: Upload File
 with tab1:
     if st.session_state.is_analyzing:
-        st.markdown(
-            "Analysis in progress. <a href='#analysis-tab'>View Analysis tab</a>",
-            unsafe_allow_html=True,
-        )
+        st.info("Analysis in progress.", icon="ℹ️")
     st.header("📂 Upload Documents")
     uploaded_files_input = st.file_uploader(
         "Add your documents (PDF, DOCX)",
@@ -94,34 +92,79 @@ if uploaded_files_input:
         st.warning(f"Duplicate files ignored: {', '.join(duplicate_files)}")
     st.session_state.uploader_key += 1
 
-    # Handle clear
-    if clear_button:
-        st.session_state.uploaded_files = []
-        st.session_state.uploaded_file_ids = []
-        st.session_state.file_id_to_name = {}
-        st.session_state.analysis_results = {
-            "all_dates": [],
-            "all_requirements": [],
-            "all_folder_structures": [],
-            "summary_response": "",
-            "progress_log_messages": [],
-        }
-        st.session_state.thread_id = (
-            openai.beta.threads.create().id if not SIMULATION_MODE else "mock_thread_id"
-        )
-        st.session_state.is_analyzing = False
-        st.session_state.start_analysis = False
-        st.session_state.new_files_to_process = []
-        st.session_state.uploader_key += 1
-        st.rerun()
+# Handle clear
+if clear_button:
+    st.session_state.uploaded_files = []
+    st.session_state.uploaded_file_ids = []
+    st.session_state.file_id_to_name = {}
+    st.session_state.analysis_results = {
+        "all_dates": [],
+        "all_requirements": [],
+        "all_folder_structures": [],
+        "summary_response": "",
+        "progress_log_messages": [],
+    }
+    st.session_state.thread_id = (
+        openai.beta.threads.create().id if not SIMULATION_MODE else "mock_thread_id"
+    )
+    st.session_state.is_analyzing = False
+    st.session_state.start_analysis = False
+    st.session_state.new_files_to_process = []
+    st.session_state.uploader_key += 1
+    st.rerun()
 
 # Tab 2: Analysis
 with tab2:
     st.markdown('<a name="analysis-tab"></a>', unsafe_allow_html=True)
     if st.session_state.is_analyzing:
-        st.subheader("Processing...")
-        progress_bar = st.empty()  # Placeholder for progress bar
-        status_text = st.empty()  # Placeholder for status text
+        with st.spinner("Analyzing..."):
+            st.subheader("Processing...")
+            progress_bar = st.empty()  # Placeholder for progress bar
+            status_text = st.empty()  # Placeholder for status text
+
+            # Run analysis inside the spinner context
+            if st.session_state.start_analysis:
+                st.session_state.start_analysis = False
+                new_files_to_process = st.session_state.new_files_to_process
+                if new_files_to_process:
+                    new_file_ids, new_file_id_to_name = upload_files(
+                        new_files_to_process
+                    )
+                    st.session_state.uploaded_file_ids.extend(new_file_ids)
+                    st.session_state.file_id_to_name.update(new_file_id_to_name)
+
+                    # Pass progress_bar and status_text to analyze_tender
+                    (
+                        new_dates,
+                        new_requirements,
+                        new_folder_structures,
+                        new_summary_response,
+                        new_progress_log_messages,
+                    ) = analyze_tender(
+                        new_file_ids,
+                        new_file_id_to_name,
+                        progress_bar,
+                        status_text,
+                    )
+
+                    # Update results
+                    st.session_state.analysis_results["all_dates"].extend(new_dates)
+                    st.session_state.analysis_results["all_requirements"].extend(
+                        new_requirements
+                    )
+                    st.session_state.analysis_results["all_folder_structures"].extend(
+                        new_folder_structures
+                    )
+                    st.session_state.analysis_results["summary_response"] = (
+                        new_summary_response
+                    )
+                    st.session_state.analysis_results["progress_log_messages"].extend(
+                        new_progress_log_messages
+                    )
+
+                st.session_state.is_analyzing = False
+                st.session_state.new_files_to_process = []
+                st.rerun()
     else:
         if any(
             st.session_state.analysis_results[key]
@@ -164,42 +207,4 @@ if (
     ]
     st.session_state.start_analysis = True
     st.session_state.is_analyzing = True
-    st.rerun()
-
-# Run analysis
-if st.session_state.start_analysis:
-    st.session_state.start_analysis = False
-    new_files_to_process = st.session_state.new_files_to_process
-    if new_files_to_process:
-        new_file_ids, new_file_id_to_name = upload_files(new_files_to_process)
-        st.session_state.uploaded_file_ids.extend(new_file_ids)
-        st.session_state.file_id_to_name.update(new_file_id_to_name)
-
-        # Pass progress_bar and status_text to analyze_tender
-        (
-            new_dates,
-            new_requirements,
-            new_folder_structures,
-            new_summary_response,
-            new_progress_log_messages,
-        ) = analyze_tender(
-            new_file_ids,
-            new_file_id_to_name,
-            progress_bar,
-            status_text,
-        )
-
-        # Update results
-        st.session_state.analysis_results["all_dates"].extend(new_dates)
-        st.session_state.analysis_results["all_requirements"].extend(new_requirements)
-        st.session_state.analysis_results["all_folder_structures"].extend(
-            new_folder_structures
-        )
-        st.session_state.analysis_results["summary_response"] = new_summary_response
-        st.session_state.analysis_results["progress_log_messages"].extend(
-            new_progress_log_messages
-        )
-
-    st.session_state.is_analyzing = False
-    st.session_state.new_files_to_process = []
     st.rerun()
