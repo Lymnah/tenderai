@@ -1,11 +1,12 @@
-# app.py
 import streamlit as st
-from config import CUSTOM_CSS, SIMULATION_MODE
+from config import CUSTOM_CSS, SIMULATION_MODE, ASSISTANT_ID
 from file_handler import upload_files
 from tender_analyzer import (
     analyze_tender,
     run_prompt,
     synthesize_results,
+    BATCH_SIZE,
+    MAX_CONCURRENT_REQUESTS,
 )
 from ui import render_main_content
 from utils import load_image_as_base64
@@ -17,7 +18,28 @@ st.set_page_config(page_title="INOX Tender AI", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 st.title("INOX Tender AI - Assistance aux Appels d'Offres")
 
-# Sidebar with logo
+# Retrieve assistant details from OpenAI API
+try:
+    if ASSISTANT_ID:
+        assistant = openai.beta.assistants.retrieve(ASSISTANT_ID)
+        assistant_model = assistant.model
+        assistant_temperature = (
+            assistant.temperature
+            if assistant.temperature is not None
+            else "Not specified"
+        )
+        assistant_top_p = (
+            assistant.top_p if assistant.top_p is not None else "Not specified"
+        )
+    else:
+        raise ValueError("ASSISTANT_ID cannot be None")
+except Exception as e:
+    st.error(f"Failed to retrieve assistant details: {str(e)}")
+    assistant_model = "Unknown"
+    assistant_temperature = "Unknown"
+    assistant_top_p = "Unknown"
+
+# Sidebar with logo and assistant settings
 with st.sidebar:
     your_company_logo = load_image_as_base64("resources/your_company_logo.png")
     if your_company_logo:
@@ -31,6 +53,27 @@ with st.sidebar:
         )
     else:
         st.warning("Logo could not be loaded. Check the file path.")
+
+    st.header("Assistant Settings", divider=True)
+    st.markdown("<div class='setting-label'>Assistant ID</div>", unsafe_allow_html=True)
+    st.code(ASSISTANT_ID, language="text")
+
+    st.markdown("<div class='setting-label'>Model</div>", unsafe_allow_html=True)
+    st.code(assistant_model, language="text")
+
+    st.markdown("<div class='setting-label'>Temperature</div>", unsafe_allow_html=True)
+    st.code(assistant_temperature)
+
+    st.markdown("<div class='setting-label'>Top P</div>", unsafe_allow_html=True)
+    st.code(assistant_top_p)
+
+    st.markdown("<div class='setting-label'>Batch Size</div>", unsafe_allow_html=True)
+    st.code(BATCH_SIZE)
+
+    st.markdown(
+        "<div class='setting-label'>Max API Calls</div>", unsafe_allow_html=True
+    )
+    st.code(MAX_CONCURRENT_REQUESTS)
 
 # Initialize session state
 if "start_analysis" not in st.session_state:
@@ -111,8 +154,13 @@ if clear_button:
         "all_dates": [],
         "all_requirements": [],
         "all_folder_structures": [],
+        "all_client_infos": [],
         "summary_response": "",
         "progress_log_messages": [],
+        "synthesized_dates": "",
+        "synthesized_requirements": "",
+        "synthesized_folder_structure": "",
+        "synthesized_client_info": "",
     }
     st.session_state.thread_id = (
         openai.beta.threads.create().id if not SIMULATION_MODE else "mock_thread_id"
@@ -170,7 +218,7 @@ with tab2:
                     )
                     st.session_state.analysis_results["all_client_infos"].extend(
                         new_client_infos
-                    )  # Store client infos
+                    )
                     st.session_state.analysis_results["summary_response"] = (
                         new_summary_response
                     )
@@ -183,9 +231,7 @@ with tab2:
                         st.session_state.analysis_results["all_dates"],
                         st.session_state.analysis_results["all_requirements"],
                         st.session_state.analysis_results["all_folder_structures"],
-                        st.session_state.analysis_results[
-                            "all_client_infos"
-                        ],  # Pass client infos
+                        st.session_state.analysis_results["all_client_infos"],
                         st.session_state.uploaded_file_ids,
                         st.session_state.file_id_to_name,
                         logger,

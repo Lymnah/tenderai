@@ -1,4 +1,9 @@
 # tender_analyzer.py
+
+MAX_CONCURRENT_REQUESTS = 5
+MAX_THREAD_WORKERS = 4
+BATCH_SIZE = 4
+
 import streamlit as st
 import openai
 import time
@@ -6,7 +11,6 @@ from config import SIMULATION_MODE, ASSISTANT_ID
 from utils import load_mock_response, replace_citations
 from pypdf import PdfReader
 from io import BytesIO
-import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 import logging
@@ -23,7 +27,6 @@ from prompts import (
     CLIENT_INFO_PROMPT,
     DATES_PROMPT,
     REQUIREMENTS_PROMPT,
-    CLIENT_INFO_PROMPT,
     FOLDER_STRUCTURE_PROMPT,
     SUMMARY_PROMPT,
     FINAL_SUMMARY_PROMPT,
@@ -35,7 +38,6 @@ from prompts import (
 )
 from docx import Document
 
-MAX_CONCURRENT_REQUESTS = 10
 semaphore = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
 
 # Validate ASSISTANT_ID at the start of the module
@@ -66,6 +68,9 @@ def init_logger():
 
 # Functions to log specific types of data
 def log_raw_response(logger, task_name, response, source="AI"):
+    # Truncate response to 1000 characters to avoid log truncation
+    if len(response) > 1000:
+        response = response[:1000] + "... (truncated)"
     logger.info(
         f"Raw response for {task_name} (Source: {source}):\n{response}\n{'-'*50}"
     )
@@ -97,7 +102,9 @@ def log_retry(logger):
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type(openai.RateLimitError),
+    retry=retry_if_exception_type(
+        (openai.RateLimitError, openai.APIConnectionError, openai.APITimeoutError)
+    ),
     after=log_retry(logging.getLogger()),
 )
 def run_prompt(file_ids, prompt, task_name, logger):
@@ -106,10 +113,13 @@ def run_prompt(file_ids, prompt, task_name, logger):
             time.sleep(0.2)
             response = load_mock_response(task_name)
             log_raw_response(logger, task_name, response, source="Mock")
-            return response
+            return response, {}
         else:
             try:
+                # Create a thread
                 thread = openai.beta.threads.create()
+
+                # Create a message in the thread
                 openai.beta.threads.messages.create(
                     thread_id=thread.id,
                     role="user",
@@ -119,38 +129,89 @@ def run_prompt(file_ids, prompt, task_name, logger):
                         for fid in file_ids
                     ],
                 )
+
+                # Create a run
                 run = openai.beta.threads.runs.create(
                     thread_id=thread.id,
                     assistant_id=ASSISTANT_ID.strip(),
                     tools=[{"type": "file_search"}],
-                    temperature=0,
-                    top_p=0,
                 )
+
+                # Poll the run status
                 while True:
-                    run_status = openai.beta.threads.runs.retrieve(
+                    run_status_response = openai.beta.threads.runs.retrieve(
                         thread_id=thread.id, run_id=run.id
                     )
-                    if run_status.status == "completed":
+                    if run_status_response.status == "completed":
                         break
-                    elif run_status.status in ["failed", "cancelled"]:
-                        error_msg = f"{task_name} failed: {run_status.status}"
+                    elif run_status_response.status in ["failed", "cancelled"]:
+                        error_msg = f"{task_name} failed with status: {run_status_response.status}"
                         log_error(logger, error_msg)
-                        return error_msg
-                    time.sleep(0.5)
-                messages = openai.beta.threads.messages.list(thread_id=thread.id)
+                        return error_msg, {}
+                    time.sleep(1)
+
+                # Retrieve messages with raw response to access headers
+                raw_response = openai.beta.threads.messages.with_raw_response.list(
+                    thread_id=thread.id
+                )
+                messages_response = (
+                    raw_response.parse()
+                )  # Parse to get SyncCursorPage[Message]
+                response_headers = (
+                    raw_response.headers
+                )  # Access headers from LegacyAPIResponse
+
+                # Extract the assistant's response
                 response = "\n".join(
                     content.text.value
-                    for msg in messages.data
+                    for msg in messages_response.data
                     if msg.role == "assistant"
                     for content in msg.content
                     if content.type == "text"
                 )
                 log_raw_response(logger, task_name, response, source="AI")
-                return response if response else "No response generated."
-            except Exception as e:
-                error_msg = f"Error in {task_name}: {str(e)}"
+
+                # Extract rate limit headers
+                rate_limit_headers = {
+                    "remaining_requests": response_headers.get(
+                        "x-ratelimit-remaining-requests", "N/A"
+                    ),
+                    "limit_requests": response_headers.get(
+                        "x-ratelimit-limit-requests", "N/A"
+                    ),
+                    "reset_requests": response_headers.get(
+                        "x-ratelimit-reset-requests", "N/A"
+                    ),
+                    "remaining_tokens": response_headers.get(
+                        "x-ratelimit-remaining-tokens", "N/A"
+                    ),
+                    "limit_tokens": response_headers.get(
+                        "x-ratelimit-limit-tokens", "N/A"
+                    ),
+                    "reset_tokens": response_headers.get(
+                        "x-ratelimit-reset-tokens", "N/A"
+                    ),
+                }
+                logger.info(f"Rate limit info for {task_name}: {rate_limit_headers}")
+
+                return (
+                    response if response else "No response generated."
+                ), rate_limit_headers
+
+            except openai.APIError as e:
+                if isinstance(e, openai.RateLimitError):
+                    retry_after = getattr(e, "headers", {}).get("Retry-After", "N/A")
+                    error_msg = f"OpenAI API request exceeded rate limit in {task_name}: {str(e)}, Retry-After: {retry_after}s"
+                else:
+                    error_msg = (
+                        f"OpenAI API returned an API Error in {task_name}: {str(e)}"
+                    )
                 log_error(logger, error_msg)
-                return error_msg
+                return error_msg, {}
+            except Exception as e:
+                error_msg = f"Unexpected error in {task_name}: {str(e)}"
+                log_error(logger, error_msg)
+                return error_msg, {}
 
 
 def generate_summary_in_batches(
@@ -159,11 +220,11 @@ def generate_summary_in_batches(
     summaries = []
     for i in range(0, len(file_ids), batch_size):
         batch_file_ids = file_ids[i : i + batch_size]
-        batch_summary = run_prompt(
+        batch_summary, _ = run_prompt(
             batch_file_ids, SUMMARY_PROMPT, "Tender Summary Batch", logger
         )
         summaries.append(batch_summary)
-    # Synthesize dates and requirements for the final summary
+
     dates_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{dates}"
@@ -171,7 +232,7 @@ def generate_summary_in_batches(
             if dates.strip() and dates.strip() != "NO_INFO_FOUND"
         ]
     )
-    synthesized_dates = (
+    synthesized_dates, _ = (
         run_prompt(
             [],
             format_prompt(SYNTHESIZE_DATES_PROMPT, dates_data=dates_data),
@@ -179,7 +240,7 @@ def generate_summary_in_batches(
             logger,
         )
         if dates_data
-        else "NO_INFO_FOUND"
+        else ("NO_INFO_FOUND", {})
     )
 
     requirements_data = "\n\n".join(
@@ -189,7 +250,7 @@ def generate_summary_in_batches(
             if reqs.strip() and reqs.strip() != "NO_INFO_FOUND"
         ]
     )
-    synthesized_requirements = (
+    synthesized_requirements, _ = (
         run_prompt(
             [],
             format_prompt(
@@ -199,10 +260,10 @@ def generate_summary_in_batches(
             logger,
         )
         if requirements_data
-        else "NO_INFO_FOUND"
+        else ("NO_INFO_FOUND", {})
     )
 
-    final_summary = run_prompt(
+    final_summary, _ = run_prompt(
         [],
         format_prompt(
             FINAL_SUMMARY_PROMPT,
@@ -369,61 +430,100 @@ def analyze_file_batch(
 
     for file_id in batch_file_ids:
         file_name = file_id_to_name[file_id]
-        dates_response = ""
-        requirements_response = ""
-        folder_structure_response = ""
-        client_info_response = ""  # New variable for client info
-        dates_source = "AI"
+        logger.info(f"Starting analysis for {file_name}")
 
         with lock:
             progress_log_messages.append(f"Analyzing {file_name}...")
 
         def analyze_task(file_id, prompt, task_name):
             try:
-                return run_prompt([file_id], prompt, task_name, logger)
+                response, rate_limit_headers = run_prompt(
+                    [file_id], prompt, task_name, logger
+                )
+                # Log rate limit headers for monitoring
+                try:
+                    remaining_requests = rate_limit_headers.get(
+                        "remaining_requests", "N/A"
+                    )
+                    remaining_tokens = rate_limit_headers.get("remaining_tokens", "N/A")
+                    if remaining_requests != "N/A":
+                        remaining_requests = int(remaining_requests)
+                        if remaining_requests < 50:
+                            warning_msg = f"Low remaining requests: {remaining_requests} for {task_name}"
+                            logger.warning(warning_msg)
+                            with lock:
+                                progress_log_messages.append(warning_msg)
+                    if remaining_tokens != "N/A":
+                        remaining_tokens = int(remaining_tokens)
+                        if remaining_tokens < 10000:
+                            warning_msg = f"Low remaining tokens: {remaining_tokens} for {task_name}"
+                            logger.warning(warning_msg)
+                            with lock:
+                                progress_log_messages.append(warning_msg)
+                except (ValueError, TypeError):
+                    logger.warning(
+                        f"Could not parse rate limit headers for {task_name}: {rate_limit_headers}"
+                    )
+                return response
             except Exception as e:
                 error_msg = f"Error analyzing {task_name} in {file_name}: {str(e)}"
                 log_error(logger, error_msg)
                 return error_msg
 
-        with ThreadPoolExecutor(max_workers=3) as executor:  # Increased to 4
-            dates_future = executor.submit(
-                analyze_task,
-                file_id,
-                format_prompt(DATES_PROMPT, file_name=file_name),
-                f"Dates for {file_name}",
-            )
-            requirements_future = executor.submit(
-                analyze_task,
-                file_id,
-                REQUIREMENTS_PROMPT,
-                f"Requirements for {file_name}",
-            )
-            folder_structure_future = executor.submit(
-                analyze_task,
-                file_id,
-                format_prompt(FOLDER_STRUCTURE_PROMPT, file_name=file_name),
-                f"Folder Structure for {file_name}",
-            )
-            client_info_future = executor.submit(
-                analyze_task,
-                file_id,
-                format_prompt(CLIENT_INFO_PROMPT, file_name=file_name),
-                f"Client Info for {file_name}",
-            )
+        with ThreadPoolExecutor(max_workers=MAX_THREAD_WORKERS) as executor:
+            futures = {
+                "dates": executor.submit(
+                    analyze_task,
+                    file_id,
+                    format_prompt(DATES_PROMPT, file_name=file_name),
+                    f"Dates for {file_name}",
+                ),
+                "requirements": executor.submit(
+                    analyze_task,
+                    file_id,
+                    REQUIREMENTS_PROMPT,
+                    f"Requirements for {file_name}",
+                ),
+                "folder_structure": executor.submit(
+                    analyze_task,
+                    file_id,
+                    format_prompt(FOLDER_STRUCTURE_PROMPT, file_name=file_name),
+                    f"Folder Structure for {file_name}",
+                ),
+                "client_info": executor.submit(
+                    analyze_task,
+                    file_id,
+                    format_prompt(CLIENT_INFO_PROMPT, file_name=file_name),
+                    f"Client Info for {file_name}",
+                ),
+            }
 
-            dates_response = dates_future.result()
-            update_progress(f"Completed Dates for {file_name}", increment=True)
-            requirements_response = requirements_future.result()
-            update_progress(f"Completed Requirements for {file_name}", increment=True)
-            folder_structure_response = folder_structure_future.result()
-            update_progress(
-                f"Completed Folder Structure for {file_name}", increment=True
-            )
-            client_info_response = client_info_future.result()
-            update_progress(f"Completed Client Info for {file_name}", increment=True)
+            results = {
+                "dates": "",
+                "requirements": "",
+                "folder_structure": "",
+                "client_info": "",
+            }
+            for future in as_completed(futures.values()):
+                task_name = [k for k, v in futures.items() if v == future][0]
+                try:
+                    results[task_name] = future.result()
+                    update_progress(
+                        f"Completed {task_name.capitalize()} for {file_name}",
+                        increment=True,
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Task {task_name} for {file_name} failed after retries: {e}"
+                    )
+                    results[task_name] = f"Error: {e}"
 
-        # Fallback for dates (unchanged)
+        dates_response = results["dates"]
+        requirements_response = results["requirements"]
+        folder_structure_response = results["folder_structure"]
+        client_info_response = results["client_info"]
+        dates_source = "AI"
+
         if "NO_INFO_FOUND" in dates_response:
             for file in uploaded_files:
                 if file.name == file_name:
@@ -444,9 +544,8 @@ def analyze_file_batch(
                 and dates_response
                 and dates_response != "NO_INFO_FOUND"
             ):
-                dates_response += "[fallback]"
+                dates_response += " [fallback]"
 
-        # Replace citations
         dates_response = replace_citations(dates_response, file_id_to_name)
         requirements_response = replace_citations(
             requirements_response, file_id_to_name
@@ -459,6 +558,13 @@ def analyze_file_batch(
         log_raw_response(
             logger, f"Dates for {file_name}", dates_response, source=dates_source
         )
+        log_raw_response(logger, f"Requirements for {file_name}", requirements_response)
+        log_raw_response(
+            logger, f"Folder Structure for {file_name}", folder_structure_response
+        )
+        log_raw_response(logger, f"Client Info for {file_name}", client_info_response)
+
+        logger.info(f"Completed analysis for {file_name}")
 
         batch_results.append(
             (
@@ -468,6 +574,7 @@ def analyze_file_batch(
                 client_info_response,
             )
         )
+
     return batch_results
 
 
@@ -481,7 +588,7 @@ def analyze_tender(
     total_files,
 ):
     logger = init_logger()
-    batch_size = 3
+    batch_size = BATCH_SIZE
     total_batches = (len(uploaded_file_ids) + batch_size - 1) // batch_size
     total_tasks = len(uploaded_file_ids) * 4 + 1  # 4 tasks per file + summary
     current_task = 0
@@ -492,7 +599,6 @@ def analyze_tender(
     all_client_infos = []
     lock = threading.Lock()
 
-    # Log all files being processed
     file_names = [file_id_to_name[file_id] for file_id in uploaded_file_ids]
     logger.info(f"Starting analysis for {total_files} files: {', '.join(file_names)}")
 
@@ -507,7 +613,6 @@ def analyze_tender(
             msg = f"[{time.strftime('%H:%M:%S')}] {message}"
             progress_log_messages.append(msg)
 
-    # Process files in batches
     for i in range(0, len(uploaded_file_ids), batch_size):
         batch_number = i // batch_size + 1
         batch_file_ids = uploaded_file_ids[i : i + batch_size]
@@ -531,20 +636,25 @@ def analyze_tender(
             logger,
             update_progress,
         )
-        for dates, requirements, folder_structure in batch_results:
+        for dates, requirements, folder_structure, client_info in batch_results:
             all_dates.append(dates)
             all_requirements.append(requirements)
             all_folder_structures.append(folder_structure)
+            all_client_infos.append(client_info)
 
-    # Summary task
     update_progress("Generating tender summary...", increment=True)
     try:
         if len(uploaded_file_ids) > 10:
             summary_response = generate_summary_in_batches(
-                uploaded_file_ids, file_id_to_name, logger, all_dates, all_requirements
+                uploaded_file_ids,
+                file_id_to_name,
+                logger,
+                all_dates,
+                all_requirements,
+                BATCH_SIZE,
             )
         else:
-            summary_response = run_prompt(
+            summary_response, _ = run_prompt(
                 uploaded_file_ids, SUMMARY_PROMPT, "Tender Summary", logger
             )
     except Exception as e:
@@ -554,12 +664,13 @@ def analyze_tender(
     summary_response = replace_citations(summary_response, file_id_to_name)
     update_progress("Analysis complete", increment=True)
 
-    for file_id in uploaded_file_ids:
-        try:
-            openai.files.delete(file_id)
-        except Exception as e:
-            st.warning(f"Failed to delete file {file_id}: {str(e)}")
-            log_error(logger, f"Failed to delete file {file_id}: {str(e)}")
+    if "Error" not in summary_response:
+        for file_id in uploaded_file_ids:
+            try:
+                openai.files.delete(file_id)
+            except Exception as e:
+                st.warning(f"Failed to delete file {file_id}: {str(e)}")
+                log_error(logger, f"Failed to delete file {file_id}: {str(e)}")
 
     return (
         all_dates,
@@ -580,7 +691,7 @@ def synthesize_results(
     file_id_to_name,
     logger,
 ):
-    # Synthesize dates (unchanged)
+    # Synthesize dates
     dates_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{dates}"
@@ -589,7 +700,7 @@ def synthesize_results(
         ]
     )
     if dates_data:
-        synthesized_dates = run_prompt(
+        synthesized_dates, _ = run_prompt(
             [],
             format_prompt(SYNTHESIZE_DATES_PROMPT, dates_data=dates_data),
             "Synthesize Dates",
@@ -598,7 +709,7 @@ def synthesize_results(
     else:
         synthesized_dates = "NO_INFO_FOUND"
 
-    # Synthesize requirements (must run first due to dependency)
+    # Synthesize requirements
     requirements_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{reqs}"
@@ -607,7 +718,7 @@ def synthesize_results(
         ]
     )
     if requirements_data:
-        synthesized_requirements = run_prompt(
+        synthesized_requirements, _ = run_prompt(
             [],
             format_prompt(
                 SYNTHESIZE_REQUIREMENTS_PROMPT, requirements_data=requirements_data
@@ -618,7 +729,7 @@ def synthesize_results(
     else:
         synthesized_requirements = "NO_INFO_FOUND"
 
-    # Synthesize folder structures with requirements data
+    # Synthesize folder structures
     folder_structure_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{struct}"
@@ -627,7 +738,7 @@ def synthesize_results(
         ]
     )
     if folder_structure_data or synthesized_requirements != "NO_INFO_FOUND":
-        synthesized_folder_structure = run_prompt(
+        synthesized_folder_structure, _ = run_prompt(
             [],
             format_prompt(
                 SYNTHESIZE_FOLDER_STRUCTURE_PROMPT,
@@ -649,7 +760,7 @@ def synthesize_results(
         ]
     )
     if client_info_data:
-        synthesized_client_info = run_prompt(
+        synthesized_client_info, _ = run_prompt(
             [],
             format_prompt(
                 SYNTHESIZE_CLIENT_INFO_PROMPT, client_info_data=client_info_data

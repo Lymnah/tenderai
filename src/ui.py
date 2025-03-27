@@ -242,7 +242,7 @@ def render_main_content(
                             )
                         if run_status.status == "completed":
                             break
-                        time.sleep(0.5)
+                        time.sleep(1)
                     spinner_placeholder.empty()
                     messages = openai.beta.threads.messages.list(thread_id=thread_id)
                     assistant_response = next(
