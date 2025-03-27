@@ -48,11 +48,13 @@ if "analysis_results" not in st.session_state:
         "all_dates": [],
         "all_requirements": [],
         "all_folder_structures": [],
+        "all_client_infos": [],
         "summary_response": "",
         "progress_log_messages": [],
         "synthesized_dates": "",
         "synthesized_requirements": "",
         "synthesized_folder_structure": "",
+        "synthesized_client_info": "",
     }
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = (
@@ -146,6 +148,7 @@ with tab2:
                         new_dates,
                         new_requirements,
                         new_folder_structures,
+                        new_client_infos,
                         new_summary_response,
                         new_progress_log_messages,
                     ) = analyze_tender(
@@ -158,7 +161,6 @@ with tab2:
                         total_files,
                     )
 
-                    # Update per-file results
                     st.session_state.analysis_results["all_dates"].extend(new_dates)
                     st.session_state.analysis_results["all_requirements"].extend(
                         new_requirements
@@ -166,6 +168,9 @@ with tab2:
                     st.session_state.analysis_results["all_folder_structures"].extend(
                         new_folder_structures
                     )
+                    st.session_state.analysis_results["all_client_infos"].extend(
+                        new_client_infos
+                    )  # Store client infos
                     st.session_state.analysis_results["summary_response"] = (
                         new_summary_response
                     )
@@ -173,14 +178,14 @@ with tab2:
                         new_progress_log_messages
                     )
 
-                    # Synthesize results using all accumulated data
-                    logger = logging.getLogger(
-                        "synthesis"
-                    )  # Simple logger for synthesis
+                    logger = logging.getLogger("synthesis")
                     synthesized_results = synthesize_results(
                         st.session_state.analysis_results["all_dates"],
                         st.session_state.analysis_results["all_requirements"],
                         st.session_state.analysis_results["all_folder_structures"],
+                        st.session_state.analysis_results[
+                            "all_client_infos"
+                        ],  # Pass client infos
                         st.session_state.uploaded_file_ids,
                         st.session_state.file_id_to_name,
                         logger,

@@ -20,11 +20,14 @@ from tenacity import (
     after_log,
 )
 from prompts import (
+    CLIENT_INFO_PROMPT,
     DATES_PROMPT,
     REQUIREMENTS_PROMPT,
+    CLIENT_INFO_PROMPT,
     FOLDER_STRUCTURE_PROMPT,
     SUMMARY_PROMPT,
     FINAL_SUMMARY_PROMPT,
+    SYNTHESIZE_CLIENT_INFO_PROMPT,
     SYNTHESIZE_FOLDER_STRUCTURE_PROMPT,
     SYNTHESIZE_REQUIREMENTS_PROMPT,
     SYNTHESIZE_DATES_PROMPT,
@@ -150,8 +153,9 @@ def run_prompt(file_ids, prompt, task_name, logger):
                 return error_msg
 
 
-def generate_summary_in_batches(file_ids, file_id_to_name, logger, batch_size=10):
-    """Generate summary in batches to respect attachment limits."""
+def generate_summary_in_batches(
+    file_ids, file_id_to_name, logger, all_dates, all_requirements, batch_size=10
+):
     summaries = []
     for i in range(0, len(file_ids), batch_size):
         batch_file_ids = file_ids[i : i + batch_size]
@@ -159,10 +163,53 @@ def generate_summary_in_batches(file_ids, file_id_to_name, logger, batch_size=10
             batch_file_ids, SUMMARY_PROMPT, "Tender Summary Batch", logger
         )
         summaries.append(batch_summary)
-    # Combine batch summaries into a final summary
+    # Synthesize dates and requirements for the final summary
+    dates_data = "\n\n".join(
+        [
+            f"File: {file_id_to_name[file_id]}\n{dates}"
+            for file_id, dates in zip(file_ids, all_dates)
+            if dates.strip() and dates.strip() != "NO_INFO_FOUND"
+        ]
+    )
+    synthesized_dates = (
+        run_prompt(
+            [],
+            format_prompt(SYNTHESIZE_DATES_PROMPT, dates_data=dates_data),
+            "Synthesize Dates for Summary",
+            logger,
+        )
+        if dates_data
+        else "NO_INFO_FOUND"
+    )
+
+    requirements_data = "\n\n".join(
+        [
+            f"File: {file_id_to_name[file_id]}\n{reqs}"
+            for file_id, reqs in zip(file_ids, all_requirements)
+            if reqs.strip() and reqs.strip() != "NO_INFO_FOUND"
+        ]
+    )
+    synthesized_requirements = (
+        run_prompt(
+            [],
+            format_prompt(
+                SYNTHESIZE_REQUIREMENTS_PROMPT, requirements_data=requirements_data
+            ),
+            "Synthesize Requirements for Summary",
+            logger,
+        )
+        if requirements_data
+        else "NO_INFO_FOUND"
+    )
+
     final_summary = run_prompt(
         [],
-        format_prompt(FINAL_SUMMARY_PROMPT, partial_summaries="\n\n".join(summaries)),
+        format_prompt(
+            FINAL_SUMMARY_PROMPT,
+            partial_summaries="\n\n".join(summaries),
+            synthesized_dates=synthesized_dates,
+            synthesized_requirements=synthesized_requirements,
+        ),
         "Final Tender Summary",
         logger,
     )
@@ -325,12 +372,12 @@ def analyze_file_batch(
         dates_response = ""
         requirements_response = ""
         folder_structure_response = ""
-        dates_source = "AI"  # Track the source of the dates
+        client_info_response = ""  # New variable for client info
+        dates_source = "AI"
 
         with lock:
             progress_log_messages.append(f"Analyzing {file_name}...")
 
-        # Define analysis tasks
         def analyze_task(file_id, prompt, task_name):
             try:
                 return run_prompt([file_id], prompt, task_name, logger)
@@ -339,8 +386,7 @@ def analyze_file_batch(
                 log_error(logger, error_msg)
                 return error_msg
 
-        # Run tasks in parallel
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=3) as executor:  # Increased to 4
             dates_future = executor.submit(
                 analyze_task,
                 file_id,
@@ -359,8 +405,13 @@ def analyze_file_batch(
                 format_prompt(FOLDER_STRUCTURE_PROMPT, file_name=file_name),
                 f"Folder Structure for {file_name}",
             )
+            client_info_future = executor.submit(
+                analyze_task,
+                file_id,
+                format_prompt(CLIENT_INFO_PROMPT, file_name=file_name),
+                f"Client Info for {file_name}",
+            )
 
-            # Collect results and update progress for each task
             dates_response = dates_future.result()
             update_progress(f"Completed Dates for {file_name}", increment=True)
             requirements_response = requirements_future.result()
@@ -369,8 +420,10 @@ def analyze_file_batch(
             update_progress(
                 f"Completed Folder Structure for {file_name}", increment=True
             )
+            client_info_response = client_info_future.result()
+            update_progress(f"Completed Client Info for {file_name}", increment=True)
 
-        # Fallback for dates if AI returns NO_INFO_FOUND
+        # Fallback for dates (unchanged)
         if "NO_INFO_FOUND" in dates_response:
             for file in uploaded_files:
                 if file.name == file_name:
@@ -386,7 +439,6 @@ def analyze_file_batch(
                         dates_response = extract_dates_fallback(file_content, file_name)
                         dates_source = "Fallback"
                     break
-            # Add a subtle marker (zero-width space) to indicate fallback
             if (
                 dates_source == "Fallback"
                 and dates_response
@@ -402,14 +454,19 @@ def analyze_file_batch(
         folder_structure_response = replace_citations(
             folder_structure_response, file_id_to_name
         )
+        client_info_response = replace_citations(client_info_response, file_id_to_name)
 
-        # Log the source of the dates
         log_raw_response(
             logger, f"Dates for {file_name}", dates_response, source=dates_source
         )
 
         batch_results.append(
-            (dates_response, requirements_response, folder_structure_response)
+            (
+                dates_response,
+                requirements_response,
+                folder_structure_response,
+                client_info_response,
+            )
         )
     return batch_results
 
@@ -423,17 +480,21 @@ def analyze_tender(
     uploaded_files,
     total_files,
 ):
-    """Analyze tender documents in batches and update progress."""
     logger = init_logger()
     batch_size = 3
     total_batches = (len(uploaded_file_ids) + batch_size - 1) // batch_size
-    total_tasks = len(uploaded_file_ids) * 3 + 1  # 3 tasks per file + summary
+    total_tasks = len(uploaded_file_ids) * 4 + 1  # 4 tasks per file + summary
     current_task = 0
     progress_log_messages = []
     all_dates = []
     all_requirements = []
     all_folder_structures = []
+    all_client_infos = []
     lock = threading.Lock()
+
+    # Log all files being processed
+    file_names = [file_id_to_name[file_id] for file_id in uploaded_file_ids]
+    logger.info(f"Starting analysis for {total_files} files: {', '.join(file_names)}")
 
     def update_progress(message, increment=True):
         nonlocal current_task
@@ -452,7 +513,6 @@ def analyze_tender(
         batch_file_ids = uploaded_file_ids[i : i + batch_size]
         batch_start = i + 1
         batch_end = min(i + batch_size, total_files)
-        # Update status without incrementing task
         update_progress(
             f"Starting analysis for files {batch_start}-{batch_end} of {total_files} (Batch {batch_number}/{total_batches})",
             increment=False,
@@ -481,7 +541,7 @@ def analyze_tender(
     try:
         if len(uploaded_file_ids) > 10:
             summary_response = generate_summary_in_batches(
-                uploaded_file_ids, file_id_to_name, logger
+                uploaded_file_ids, file_id_to_name, logger, all_dates, all_requirements
             )
         else:
             summary_response = run_prompt(
@@ -494,7 +554,6 @@ def analyze_tender(
     summary_response = replace_citations(summary_response, file_id_to_name)
     update_progress("Analysis complete", increment=True)
 
-    # Clean up OpenAI files
     for file_id in uploaded_file_ids:
         try:
             openai.files.delete(file_id)
@@ -506,6 +565,7 @@ def analyze_tender(
         all_dates,
         all_requirements,
         all_folder_structures,
+        all_client_infos,
         summary_response,
         progress_log_messages,
     )
@@ -515,12 +575,12 @@ def synthesize_results(
     all_dates,
     all_requirements,
     all_folder_structures,
+    all_client_infos,
     uploaded_file_ids,
     file_id_to_name,
     logger,
 ):
-    """Synthesize per-file analysis results into consolidated outputs."""
-    # Synthesize dates
+    # Synthesize dates (unchanged)
     dates_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{dates}"
@@ -538,7 +598,7 @@ def synthesize_results(
     else:
         synthesized_dates = "NO_INFO_FOUND"
 
-    # Synthesize requirements
+    # Synthesize requirements (must run first due to dependency)
     requirements_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{reqs}"
@@ -558,7 +618,7 @@ def synthesize_results(
     else:
         synthesized_requirements = "NO_INFO_FOUND"
 
-    # Synthesize folder structures
+    # Synthesize folder structures with requirements data
     folder_structure_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{struct}"
@@ -566,12 +626,13 @@ def synthesize_results(
             if struct.strip() and struct.strip() != "NO_INFO_FOUND"
         ]
     )
-    if folder_structure_data:
+    if folder_structure_data or synthesized_requirements != "NO_INFO_FOUND":
         synthesized_folder_structure = run_prompt(
             [],
             format_prompt(
                 SYNTHESIZE_FOLDER_STRUCTURE_PROMPT,
                 folder_structure_data=folder_structure_data,
+                requirements_data=synthesized_requirements,
             ),
             "Synthesize Folder Structure",
             logger,
@@ -579,8 +640,29 @@ def synthesize_results(
     else:
         synthesized_folder_structure = "NO_INFO_FOUND"
 
+    # Synthesize client information
+    client_info_data = "\n\n".join(
+        [
+            f"File: {file_id_to_name[file_id]}\n{client_info}"
+            for file_id, client_info in zip(uploaded_file_ids, all_client_infos)
+            if client_info.strip() and client_info.strip() != "NO_INFO_FOUND"
+        ]
+    )
+    if client_info_data:
+        synthesized_client_info = run_prompt(
+            [],
+            format_prompt(
+                SYNTHESIZE_CLIENT_INFO_PROMPT, client_info_data=client_info_data
+            ),
+            "Synthesize Client Info",
+            logger,
+        )
+    else:
+        synthesized_client_info = "NO_INFO_FOUND"
+
     return {
         "synthesized_dates": synthesized_dates,
         "synthesized_requirements": synthesized_requirements,
         "synthesized_folder_structure": synthesized_folder_structure,
+        "synthesized_client_info": synthesized_client_info,
     }

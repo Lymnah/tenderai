@@ -19,6 +19,7 @@ def render_main_content(
     synthesized_folder_structure = analysis_results.get(
         "synthesized_folder_structure", ""
     )
+    synthesized_client_info = analysis_results.get("synthesized_client_info", "")  # New
     summary_response = analysis_results["summary_response"]
     all_dates = analysis_results["all_dates"]
     all_requirements = analysis_results["all_requirements"]
@@ -27,6 +28,16 @@ def render_main_content(
 
     # Consolidated Analysis Section
     st.header("📊 Consolidated Tender Analysis", divider=True)
+    # Client Information (New Section)
+    st.subheader("👤 Client Information")
+    with st.expander("View Client Information", expanded=True):
+        if (
+            synthesized_client_info.strip()
+            and synthesized_client_info.strip() != "NO_INFO_FOUND"
+        ):
+            st.markdown(synthesized_client_info, unsafe_allow_html=False)
+        else:
+            st.markdown("No client information found.")
 
     # Tender Summary
     st.subheader("📝 Tender Summary")
@@ -137,6 +148,11 @@ def render_main_content(
 
     # Update Download Report
     full_report = "Tender Analysis Report\n\n"
+    if (
+        synthesized_client_info.strip()
+        and synthesized_client_info.strip() != "NO_INFO_FOUND"
+    ):
+        full_report += "## Client Information\n" + synthesized_client_info + "\n\n"
     if synthesized_dates.strip() and synthesized_dates.strip() != "NO_INFO_FOUND":
         full_report += "## Consolidated Dates\n" + synthesized_dates + "\n\n"
     if (
