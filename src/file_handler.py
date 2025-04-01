@@ -1,13 +1,11 @@
-# file_handler.py
 import streamlit as st
 import openai
 import os
 import tempfile
-from config import SIMULATION_MODE
 import time
 
 
-def upload_files(uploaded_files):
+def upload_files(uploaded_files, simulation_mode):
     uploaded_file_ids = []
     failed_uploads = []
     total_files = len(uploaded_files)
@@ -40,9 +38,7 @@ def upload_files(uploaded_files):
                 failed_uploads.append(file.name)
                 continue
 
-            if SIMULATION_MODE:
-                # Simulate upload time (1 second)
-                time.sleep(1)
+            if simulation_mode:
                 # Mock file ID
                 mock_file_id = f"mock_file_id_{i}"
                 uploaded_file_ids.append(mock_file_id)

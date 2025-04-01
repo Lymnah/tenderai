@@ -1,34 +1,131 @@
-0. Mock:
-- This is a simulation
+# Mock Response for Simulation Mode
 
-1. Submission Deadline:
-- The submission deadline for the tender is **March 31, 2021, at 12:00 PM (CET)**. The time zone is inferred as CET since the document pertains to a Swiss project [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf].
+## Client Information
+- Client name: Groupe E SA
+- Address: Route de Morat 135, 1763 Granges-Paccot, Switzerland
+- Contact: Service Achats Projets, achat@groupe-e.ch
+- Project: CROM - Le Locle - Rte de contournement de La Chaux-de-Fond
+- Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
 
-2. Submission Method:
-- The submission must be made in **printed form**.
-- **Address for Submission**: The tender documents must be submitted to the following address:  
-  **Groupe E SA, Route de Morat 135, 1763 Granges-Paccot, Switzerland**.  
-- **Labeling Instructions**: The envelope must be clearly marked with "Tender Submission - CROM - Le Locle - Rte de contournement de La Chaux-de-Fond" [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf].
+## Tender Summary
+**Purpose**:
+- The tender is for the supply of synthetic insulated cables (2005) and provision of installation accessories (T25-SAM).
 
-3. Submission Format:
-- The submission must be in **paper format**.
-- All documents must be submitted in **triplicate** (one original and two copies).
-- The tender must include a digital copy on a USB drive, formatted as PDF files.
-- Specific templates are required for certain annexes (see section 4 for details) [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf].
+**Main Deliverables**:
+- Supply of cables and accessories.
+- Installation and testing of the system.
+- Documentation for the tender, including technical and financial proposals.
 
-4. Required Document Structures and Templates:
-- The tender requires the submission of various annexes alongside the proposal. Some of the essential annexes include:
-  - Attestation on honor (Annexe P1).
-  - Financial and insurance guarantees (Annexe P5).
-  - Commitment to gender equality (Annexe P6).
-  - Contribution to sustainable development (Annexe Q5).
-  - List of references for non-construction services (Annexe Q7).
-  - List of references for supplies (Annexe Q8).
-  - Details on resources planning and availability (Annexe R6).
-  - Work methods to achieve market objectives (Annexe R7).
-  - Understanding of specifications and services to be delivered (Annexe R14).
-  - Notification of planned subcontractors (Annexe R15) [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf].
-- Additional Notes:
-  - The document specifies that the tender validity period is until the end of May 2021.
-  - Evaluation criteria include a specific pricing calculation method and the constitution of an evaluation committee [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf].
-  - It is crucial to thoroughly review all details in the official tender documentation and comply with the specified requirements to ensure a valid and complete submission.
+**Scope**:
+- The project involves the installation of cables and accessories to support high-voltage electrical systems.
+- The project emphasizes sustainability and compliance with Swiss regulations.
+
+**Source**: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## Timeline and Submission
+- **Submission Deadline**: March 31, 2021, 12:00 PM (CET)
+- **Site Visit**: February 22, 2021
+- **Questions Deadline**: February 26, 2021
+- **Response to Questions**: March 5, 2021
+- **Tender Validity**: May 31, 2021
+- **Project Start**: June 1, 2021
+- **Completion Date**: December 31, 2023
+- **Source**: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## Evaluation Criteria
+- **Price**: 40%
+- **Delivery Time**: 20%
+- **Method**: 20%
+- **Contractor Experience**: 20%
+- **Source**: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## Contractual Conditions
+- **Contract Duration**: 1 year with a possible extension of 6 months
+- **Payment Terms**: 30 days after invoice
+- **Warranty**: 2 years for any defect
+- **Source**: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## Additional Key Details
+**Submission Requirements**:
+- The submission must be in paper format, in triplicate (one original and two copies).
+- A digital copy on a USB drive, formatted as PDF files, is required.
+- Specific templates are required for certain annexes (e.g., Annexe P1, P5, P6, Q5, Q7, Q8, R6, R7, R14, R15).
+
+**Mandatory Requirements**:
+- Compliance with Swiss safety regulations (EN 50154).
+- ISO 9001 certification.
+
+**Optional Requirements**:
+- ISO 14001 certification.
+
+**Compliance Requirements**:
+- Adherence to GDPR and Swiss labor laws.
+
+**Financial Requirements**:
+- Minimum budget of 500k EUR.
+
+**Sustainability or Social Requirements**:
+- Commitment to gender equality (Annexe P6).
+- Contribution to sustainable development (Annexe Q5).
+
+**Performance or Quality Requirements**:
+- Quality control measures must be in place.
+
+**Certifications**:
+- ISO 9001 required.
+
+**Other Relevant Requirements**:
+- Detailed resource planning (Annexe R6).
+- Work methods to achieve market objectives (Annexe R7).
+
+**Source**: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## All Important Dates and Milestones
+- 2021-02-22, Site Visit, Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+- 2021-02-26, Deadline for questions, Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+- 2021-03-05, Response to questions, Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+- 2021-03-31, Submission Deadline, 12:00 PM (CET), Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+- 2021-05-31, Tender Validity, Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+- 2021-06-01, Project Start, Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+- 2023-12-31, Completion Date, Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## Technical Requirements
+**Submission Requirements**:
+- The submission must be in paper format, in triplicate (one original and two copies).
+- A digital copy on a USB drive, formatted as PDF files, is required.
+
+**Mandatory Requirements**:
+- Compliance with Swiss safety regulations (EN 50154).
+- ISO 9001 certification.
+
+**Optional Requirements**:
+- ISO 14001 certification.
+
+**Compliance Requirements**:
+- Adherence to GDPR and Swiss labor laws.
+
+**Financial Requirements**:
+- Minimum budget of 500k EUR.
+
+**Sustainability or Social Requirements**:
+- Commitment to gender equality (Annexe P6).
+- Contribution to sustainable development (Annexe Q5).
+
+**Performance or Quality Requirements**:
+- Quality control measures must be in place.
+
+**Certifications**:
+- ISO 9001 required.
+
+**Other Relevant Requirements**:
+- Detailed resource planning (Annexe R6).
+- Work methods to achieve market objectives (Annexe R7).
+
+**Source**: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]
+
+## Consolidated Required Folder Structure
+- Main Submission Folder
+  - Technical Docs: Technical Proposal, Specs Sheet
+  - Financial Docs: Budget Plan
+  - Annexes: P1, P5, P6, Q5, Q7, Q8, R6, R7, R14, R15
+- Source: [00_Dossier_d'appel_d'offres_Le_Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf]

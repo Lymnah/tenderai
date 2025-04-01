@@ -104,16 +104,6 @@ http://localhost:8501
 3. **Monitor Progress**:
    - Check the "Logs" tab for detailed logs of the analysis process, including API interactions and any errors.
 
-### Simulation Mode
-
-To test the app without making actual API calls, enable simulation mode by setting the following in `config.py`:
-
-```python
-SIMULATION_MODE = True
-```
-
-This mode uses mock responses instead of calling the OpenAI API.
-
 ## Project Structure
 
 ```plaintext

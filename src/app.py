@@ -1,9 +1,8 @@
 import streamlit as st
-from config import CUSTOM_CSS, SIMULATION_MODE, ASSISTANT_ID
+from config import CUSTOM_CSS, ASSISTANT_ID
 from file_handler import upload_files
 from tender_analyzer import (
     analyze_tender,
-    run_prompt,
     synthesize_results,
     BATCH_SIZE,
     MAX_CONCURRENT_REQUESTS,
@@ -13,7 +12,7 @@ from utils import load_image_as_base64
 import openai
 import logging
 
-# Set page config first
+# Set page config
 st.set_page_config(page_title="INOX Tender AI", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 st.title("INOX Tender AI - Assistance aux Appels d'Offres")
@@ -54,6 +53,14 @@ with st.sidebar:
     else:
         st.warning("Logo could not be loaded. Check the file path.")
 
+    # Add Simulation Mode toggle
+    st.header("Simulation Mode", divider=True)
+    if "simulation_mode" not in st.session_state:
+        st.session_state.simulation_mode = False
+    st.session_state.simulation_mode = st.checkbox(
+        "Enable Simulation Mode", value=st.session_state.simulation_mode
+    )
+
     st.header("Assistant Settings", divider=True)
     st.markdown("<div class='setting-label'>Assistant ID</div>", unsafe_allow_html=True)
     st.code(ASSISTANT_ID, language="text")
@@ -75,7 +82,8 @@ with st.sidebar:
     )
     st.code(MAX_CONCURRENT_REQUESTS)
 
-# Initialize session state
+
+# Initialize session state (update thread_id)
 if "start_analysis" not in st.session_state:
     st.session_state.start_analysis = False
 if "is_analyzing" not in st.session_state:
@@ -101,7 +109,9 @@ if "analysis_results" not in st.session_state:
     }
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = (
-        openai.beta.threads.create().id if not SIMULATION_MODE else "mock_thread_id"
+        openai.beta.threads.create().id
+        if not st.session_state.simulation_mode
+        else "mock_thread_id"
     )
 if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
@@ -163,7 +173,9 @@ if clear_button:
         "synthesized_client_info": "",
     }
     st.session_state.thread_id = (
-        openai.beta.threads.create().id if not SIMULATION_MODE else "mock_thread_id"
+        openai.beta.threads.create().id
+        if not st.session_state.simulation_mode
+        else "mock_thread_id"
     )
     st.session_state.is_analyzing = False
     st.session_state.start_analysis = False
@@ -186,7 +198,8 @@ with tab2:
                 new_files_to_process = st.session_state.new_files_to_process
                 if new_files_to_process:
                     new_file_ids, new_file_id_to_name = upload_files(
-                        new_files_to_process
+                        new_files_to_process,
+                        simulation_mode=st.session_state.simulation_mode,
                     )
                     st.session_state.uploaded_file_ids.extend(new_file_ids)
                     st.session_state.file_id_to_name.update(new_file_id_to_name)
@@ -207,6 +220,7 @@ with tab2:
                         files_text,
                         st.session_state.uploaded_files,
                         total_files,
+                        simulation_mode=st.session_state.simulation_mode,
                     )
 
                     st.session_state.analysis_results["all_dates"].extend(new_dates)
@@ -235,6 +249,7 @@ with tab2:
                         st.session_state.uploaded_file_ids,
                         st.session_state.file_id_to_name,
                         logger,
+                        simulation_mode=st.session_state.simulation_mode,
                     )
                     st.session_state.analysis_results.update(synthesized_results)
 
