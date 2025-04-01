@@ -47,6 +47,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 Install all required Python packages listed in `requirements.txt`:
 
 ```
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
@@ -77,7 +78,7 @@ You can find your assistant ID in the OpenAI dashboard under the Assistants sect
 Start the Streamlit application with the following command:
 
 ```
-streamlit run app.py
+python -m streamlit run src/app.py
 ```
 
 ### Accessing the App
