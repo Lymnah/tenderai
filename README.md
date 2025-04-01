@@ -167,7 +167,10 @@ Please follow the conventional commit format for commit messages (e.g., `feat:`,
 
 ## License
 
-This project is licensed under the GNU AFFERO GENERAL PUBLIC License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [Apache License 2.0](LICENSE).
+
+© 2025 [lymnah](https://github.com/lymnah) and [Inox Communication](https://github.com/InoxCommunication)  
+You are free to use, modify, and distribute this software, with or without changes, under the terms of the license.
 
 ## Acknowledgments
 
