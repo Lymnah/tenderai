@@ -7,7 +7,7 @@ BATCH_SIZE = 4
 import streamlit as st
 import openai
 import time
-from config import SIMULATION_MODE, ASSISTANT_ID
+from config import ASSISTANT_ID
 from utils import load_mock_response, replace_citations
 from pypdf import PdfReader
 from io import BytesIO
@@ -107,10 +107,9 @@ def log_retry(logger):
     ),
     after=log_retry(logging.getLogger()),
 )
-def run_prompt(file_ids, prompt, task_name, logger):
+def run_prompt(file_ids, prompt, task_name, logger, simulation_mode):
     with semaphore:
-        if SIMULATION_MODE:
-            time.sleep(0.2)
+        if simulation_mode:
             response = load_mock_response(task_name)
             log_raw_response(logger, task_name, response, source="Mock")
             return response, {}
@@ -215,13 +214,23 @@ def run_prompt(file_ids, prompt, task_name, logger):
 
 
 def generate_summary_in_batches(
-    file_ids, file_id_to_name, logger, all_dates, all_requirements, batch_size=10
+    file_ids,
+    file_id_to_name,
+    logger,
+    all_dates,
+    all_requirements,
+    batch_size=10,
+    simulation_mode=False,
 ):
     summaries = []
     for i in range(0, len(file_ids), batch_size):
         batch_file_ids = file_ids[i : i + batch_size]
         batch_summary, _ = run_prompt(
-            batch_file_ids, SUMMARY_PROMPT, "Tender Summary Batch", logger
+            batch_file_ids,
+            SUMMARY_PROMPT,
+            "Tender Summary Batch",
+            logger,
+            simulation_mode,
         )
         summaries.append(batch_summary)
 
@@ -238,6 +247,7 @@ def generate_summary_in_batches(
             format_prompt(SYNTHESIZE_DATES_PROMPT, dates_data=dates_data),
             "Synthesize Dates for Summary",
             logger,
+            simulation_mode,
         )
         if dates_data
         else ("NO_INFO_FOUND", {})
@@ -258,6 +268,7 @@ def generate_summary_in_batches(
             ),
             "Synthesize Requirements for Summary",
             logger,
+            simulation_mode,
         )
         if requirements_data
         else ("NO_INFO_FOUND", {})
@@ -273,6 +284,7 @@ def generate_summary_in_batches(
         ),
         "Final Tender Summary",
         logger,
+        simulation_mode,
     )
     return final_summary
 
@@ -419,6 +431,7 @@ def analyze_file_batch(
     files_text,
     logger,
     update_progress,
+    simulation_mode,
 ):
     batch_results = []
     batch_start = (batch_number - 1) * len(batch_file_ids) + 1
@@ -435,10 +448,10 @@ def analyze_file_batch(
         with lock:
             progress_log_messages.append(f"Analyzing {file_name}...")
 
-        def analyze_task(file_id, prompt, task_name):
+        def analyze_task(file_id, prompt, task_name, simulation_mode):
             try:
                 response, rate_limit_headers = run_prompt(
-                    [file_id], prompt, task_name, logger
+                    [file_id], prompt, task_name, logger, simulation_mode
                 )
                 # Log rate limit headers for monitoring
                 try:
@@ -477,24 +490,28 @@ def analyze_file_batch(
                     file_id,
                     format_prompt(DATES_PROMPT, file_name=file_name),
                     f"Dates for {file_name}",
+                    simulation_mode,
                 ),
                 "requirements": executor.submit(
                     analyze_task,
                     file_id,
                     REQUIREMENTS_PROMPT,
                     f"Requirements for {file_name}",
+                    simulation_mode,
                 ),
                 "folder_structure": executor.submit(
                     analyze_task,
                     file_id,
                     format_prompt(FOLDER_STRUCTURE_PROMPT, file_name=file_name),
                     f"Folder Structure for {file_name}",
+                    simulation_mode,
                 ),
                 "client_info": executor.submit(
                     analyze_task,
                     file_id,
                     format_prompt(CLIENT_INFO_PROMPT, file_name=file_name),
                     f"Client Info for {file_name}",
+                    simulation_mode,
                 ),
             }
 
@@ -586,6 +603,7 @@ def analyze_tender(
     files_text,
     uploaded_files,
     total_files,
+    simulation_mode,
 ):
     logger = init_logger()
     batch_size = BATCH_SIZE
@@ -635,6 +653,7 @@ def analyze_tender(
             files_text,
             logger,
             update_progress,
+            simulation_mode,
         )
         for dates, requirements, folder_structure, client_info in batch_results:
             all_dates.append(dates)
@@ -652,10 +671,15 @@ def analyze_tender(
                 all_dates,
                 all_requirements,
                 BATCH_SIZE,
+                simulation_mode,
             )
         else:
             summary_response, _ = run_prompt(
-                uploaded_file_ids, SUMMARY_PROMPT, "Tender Summary", logger
+                uploaded_file_ids,
+                SUMMARY_PROMPT,
+                "Tender Summary",
+                logger,
+                simulation_mode,
             )
     except Exception as e:
         error_msg = f"Error generating summary: {str(e)}"
@@ -690,8 +714,8 @@ def synthesize_results(
     uploaded_file_ids,
     file_id_to_name,
     logger,
+    simulation_mode,
 ):
-    # Synthesize dates
     dates_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{dates}"
@@ -705,6 +729,7 @@ def synthesize_results(
             format_prompt(SYNTHESIZE_DATES_PROMPT, dates_data=dates_data),
             "Synthesize Dates",
             logger,
+            simulation_mode,
         )
     else:
         synthesized_dates = "NO_INFO_FOUND"
@@ -725,6 +750,7 @@ def synthesize_results(
             ),
             "Synthesize Requirements",
             logger,
+            simulation_mode,
         )
     else:
         synthesized_requirements = "NO_INFO_FOUND"
@@ -747,6 +773,7 @@ def synthesize_results(
             ),
             "Synthesize Folder Structure",
             logger,
+            simulation_mode,
         )
     else:
         synthesized_folder_structure = "NO_INFO_FOUND"
@@ -767,6 +794,7 @@ def synthesize_results(
             ),
             "Synthesize Client Info",
             logger,
+            simulation_mode,
         )
     else:
         synthesized_client_info = "NO_INFO_FOUND"

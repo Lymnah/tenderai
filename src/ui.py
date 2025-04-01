@@ -2,7 +2,7 @@
 import streamlit as st
 from io import BytesIO
 import PyPDF2
-from config import ASSISTANT_ID, SIMULATION_MODE
+from config import ASSISTANT_ID
 import time
 from utils import replace_citations
 from tender_analyzer import analyze_tender
@@ -218,10 +218,10 @@ def render_main_content(
 
             if submit_button and user_query.strip():
                 spinner_placeholder = st.empty()
-                if SIMULATION_MODE:
+                simulation_mode = st.session_state.simulation_mode
+                if simulation_mode:
                     with spinner_placeholder.container():
                         st.spinner("Generating response... (Status: mock)")
-                    time.sleep(1)
                     assistant_response = (
                         "This is a mock chat response to your query: " + user_query
                     )
@@ -242,7 +242,6 @@ def render_main_content(
                             )
                         if run_status.status == "completed":
                             break
-                        time.sleep(1)
                     spinner_placeholder.empty()
                     messages = openai.beta.threads.messages.list(thread_id=thread_id)
                     assistant_response = next(

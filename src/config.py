@@ -1,34 +1,30 @@
 # config.py
 import os
-import dotenv
 import streamlit as st
+import dotenv
 
-# Load environment variables
+# Load environment variables from .env file
 dotenv.load_dotenv()
 
-# Global variable to toggle simulation mode
-SIMULATION_MODE = (
-    False  # Set to True to use mock responses, False to use real OpenAI API
-)
-
-# Load API Key and Assistant ID (only required if not in simulation mode)
-if not SIMULATION_MODE:
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# Load API Key and Assistant ID using os.getenv
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
+# Check if API key and assistant ID are required (not in simulation mode)
+# Simulation mode is managed in app.py via st.session_state.simulation_mode
+if "simulation_mode" in st.session_state and st.session_state.simulation_mode:
+    OPENAI_API_KEY = None
+    ASSISTANT_ID = None
+else:
     if not OPENAI_API_KEY:
         st.error(
             "⚠️ OpenAI API Key is missing! Please set `OPENAI_API_KEY` in your environment variables."
         )
         st.stop()
-
-    ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
     if not ASSISTANT_ID:
         st.error(
             "⚠️ Assistant ID is missing! Set `OPENAI_ASSISTANT_ID` in your environment variables."
         )
         st.stop()
-else:
-    OPENAI_API_KEY = None
-    ASSISTANT_ID = None
 
 # Custom CSS for styling
 CUSTOM_CSS = """

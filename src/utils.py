@@ -19,17 +19,51 @@ def load_image_as_base64(image_path):
 def load_mock_response(prompt_type):
     try:
         with open("resources/mock_response.txt", "r", encoding="utf-8") as f:
-            base_response = f.read()
-        # Simulate different responses based on prompt type
-        if "dates" in prompt_type.lower():
-            return f"Mock Dates Response for {prompt_type}:\n- Date: 2025-04-15 14:00, Time Zone: CET, Event: Submission Deadline, Source: mock_file.pdf"
-        elif "requirements" in prompt_type.lower():
-            return f"Mock Requirements Response for {prompt_type}:\n**Mandatory Requirements**\n- Must have ISO 9001 certification [mock_file.pdf]\n**Optional Requirements**\n- None [mock_file.pdf]\n**Legal Requirements**\n- Compliance with GDPR [mock_file.pdf]\n**Financial Requirements**\n- Minimum budget of 500k EUR [mock_file.pdf]\n**Security Requirements**\n- Must have cybersecurity certification [mock_file.pdf]\n**Certifications**\n- ISO 9001 [mock_file.pdf]"
-        elif "folder structure" in prompt_type.lower():
-            return f"Mock Folder Structure Response for {prompt_type}:\n- Main Submission Folder\n  - Technical Docs: Technical Proposal, Specs Sheet [mock_file.pdf]\n  - Financial Docs: Budget Plan [mock_file.pdf]"
-        elif "summary" in prompt_type.lower():
-            return f"Mock Tender Summary Response for {prompt_type}:\nThe client is seeking a comprehensive solution for a construction project, requiring technical expertise, financial stability, and compliance with legal standards. Key deliverables include a detailed technical proposal and a financial plan. The project aims to build a new facility by 2026, with a focus on sustainability. [mock_file.pdf]"
-        return base_response
+            content = f.read()
+
+        # Split the content into sections based on headers
+        sections = {}
+        current_section = None
+        current_content = []
+        for line in content.splitlines():
+            if line.startswith("## "):
+                if current_section:
+                    sections[current_section] = "\n".join(current_content).strip()
+                current_section = line[3:].strip()
+                current_content = []
+            else:
+                current_content.append(line)
+        if current_section:
+            sections[current_section] = "\n".join(current_content).strip()
+
+        # Map prompt_type to the appropriate section
+        prompt_type_lower = prompt_type.lower()
+        if "client info" in prompt_type_lower:
+            return sections.get("Client Information", "No client information found.")
+        elif "summary" in prompt_type_lower:
+            # Combine relevant sections for the summary
+            summary_sections = [
+                sections.get("Tender Summary", ""),
+                sections.get("Timeline and Submission", ""),
+                sections.get("Evaluation Criteria", ""),
+                sections.get("Contractual Conditions", ""),
+            ]
+            return "\n\n".join(section for section in summary_sections if section)
+        elif "dates" in prompt_type_lower or "timeline" in prompt_type_lower:
+            return sections.get("All Important Dates and Milestones", "No dates found.")
+        elif "requirements" in prompt_type_lower:
+            return sections.get("Technical Requirements", "No requirements found.")
+        elif "folder structure" in prompt_type_lower:
+            return sections.get(
+                "Consolidated Required Folder Structure", "No folder structure found."
+            )
+        elif "additional key details" in prompt_type_lower:
+            return sections.get(
+                "Additional Key Details", "No additional details found."
+            )
+        else:
+            return "No response generated for prompt type: " + prompt_type
+
     except FileNotFoundError:
         st.error("Mock response file 'resources/mock_response.txt' not found.")
         return "No response generated."
