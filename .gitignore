@@ -4,3 +4,4 @@ env/
 src/utils.py
 .DS_Store
 logs/
+logs.txt
