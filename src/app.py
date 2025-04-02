@@ -117,15 +117,21 @@ if "uploader_key" not in st.session_state:
     st.session_state.uploader_key = 0
 if "new_files_to_process" not in st.session_state:
     st.session_state.new_files_to_process = []
+if "analysis_completed" not in st.session_state:
+    st.session_state.analysis_completed = False
 
-# Create tabs with dynamic labels
-analysis_tab_label = "⏳ Analysis" if st.session_state.is_analyzing else "Analysis"
-tab1, tab2, tab3 = st.tabs(["Upload File", analysis_tab_label, "Logs"])
+# Create tabs with static labels
+tab1, tab2, tab3 = st.tabs(["Upload File", "Analysis", "Logs"])
 
 # Tab 1: Upload File
 with tab1:
     if st.session_state.is_analyzing:
-        st.info("Analysis in progress.", icon="ℹ️")
+        st.info("Analysis in progress. Please wait...", icon="ℹ️")
+    else:
+        # Show notification if analysis is complete and not yet viewed
+        if st.session_state.analysis_completed:
+            st.success("Analysis complete! Check the results in the Analysis tab.")
+
     st.header("📂 Upload Documents")
     uploaded_files_input = st.file_uploader(
         "Add your documents (PDF, DOCX)",
@@ -181,6 +187,7 @@ if clear_button:
     st.session_state.start_analysis = False
     st.session_state.new_files_to_process = []
     st.session_state.uploader_key += 1
+    st.session_state.analysis_completed = False
     st.rerun()
 
 # Tab 2: Analysis
@@ -255,6 +262,7 @@ with tab2:
 
                 st.session_state.is_analyzing = False
                 st.session_state.new_files_to_process = []
+                st.session_state.analysis_completed = True
                 st.rerun()
     else:
         if any(
