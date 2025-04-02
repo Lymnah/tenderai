@@ -13,7 +13,7 @@ import openai
 import logging
 
 # Set page config
-st.set_page_config(page_title="INOX Tender AI", layout="wide")
+st.set_page_config(page_title="INOX Tender AI", layout="centered")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 # Display the logo at the top, replacing the title
