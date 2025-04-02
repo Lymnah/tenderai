@@ -15,7 +15,20 @@ import logging
 # Set page config
 st.set_page_config(page_title="INOX Tender AI", layout="wide")
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
-st.title("INOX Tender AI - Assistance aux Appels d'Offres")
+
+# Display the logo at the top, replacing the title
+your_company_logo = load_image_as_base64("resources/tenderAI_white.png")
+if your_company_logo:
+    st.markdown(
+        f"""
+        <div style="display: flex; justify-content: center; padding: 50px 20px; margin-bottom: 20px">
+            <img src="{your_company_logo}" style="max-width: 400px; height: auto;" alt="Your Company Logo">
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.warning("Logo could not be loaded. Check the file path.")
 
 # Retrieve assistant details from OpenAI API
 try:
@@ -54,14 +67,14 @@ with st.sidebar:
         st.warning("Logo could not be loaded. Check the file path.")
 
     # Add Simulation Mode toggle
-    st.header("Simulation Mode", divider=True)
+    st.header("Simulation Mode", divider="red")
     if "simulation_mode" not in st.session_state:
         st.session_state.simulation_mode = False
     st.session_state.simulation_mode = st.checkbox(
         "Enable Simulation Mode", value=st.session_state.simulation_mode
     )
 
-    st.header("Assistant Settings", divider=True)
+    st.header("Assistant Settings", divider="red")
     st.markdown("<div class='setting-label'>Assistant ID</div>", unsafe_allow_html=True)
     st.code(ASSISTANT_ID, language="text")
 
@@ -82,8 +95,7 @@ with st.sidebar:
     )
     st.code(MAX_CONCURRENT_REQUESTS)
 
-
-# Initialize session state (update thread_id)
+# Initialize session state
 if "start_analysis" not in st.session_state:
     st.session_state.start_analysis = False
 if "is_analyzing" not in st.session_state:
@@ -128,7 +140,7 @@ with tab1:
     if st.session_state.is_analyzing:
         st.info("Analysis in progress. Please wait...", icon="ℹ️")
     else:
-        # Show notification if analysis is complete and not yet viewed
+        # Show notification if analysis is complete
         if st.session_state.analysis_completed:
             st.success("Analysis complete! Check the results in the Analysis tab.")
 
@@ -141,9 +153,9 @@ with tab1:
     )
     col1, col2 = st.columns([1, 1])
     with col1:
-        analyze_button = st.button("Analyze Files")
+        analyze_button = st.button("Analyze Files", use_container_width=True)
     with col2:
-        clear_button = st.button("Clear All Files")
+        clear_button = st.button("Clear All Files", use_container_width=True)
 
 # Handle file uploads
 if uploaded_files_input:

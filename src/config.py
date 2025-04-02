@@ -33,33 +33,39 @@ CUSTOM_CSS = """
     body {
         font-family: 'Arial', sans-serif;
     }
+    .stMainBlockContainer {
+        padding-top: 40px;
+    }
     .stTextArea textarea { 
         border: 2px solid #007bff; 
         border-radius: 5px; 
         background-color: #2a2a2a; 
         color: #d3d3d3; 
     }
+    /* Updated button styling with red theme */
     .stButton button { 
-        background-color: #007bff; 
-        color: white; 
+        background-color: #bd4043; 
+        color: #ffffff; 
         border-radius: 5px; 
         padding: 10px 20px; 
         font-size: 16px; 
         transition: background-color 0.3s ease; 
+        border: none;
     }
     .stButton button:hover { 
-        background-color: #0056b3; 
+        background-color: #9e3639; 
     }
     .stDownloadButton button { 
-        background-color: #28a745; 
-        color: white; 
+        background-color: #bd4043; 
+        color: #ffffff; 
         border-radius: 5px; 
         padding: 10px 20px; 
         font-size: 16px; 
         transition: background-color 0.3s ease; 
+        border: none;
     }
     .stDownloadButton button:hover { 
-        background-color: #218838; 
+        background-color: #9e3639; 
     }
     .analysis-section { 
         margin-bottom: 30px; 
@@ -91,13 +97,15 @@ CUSTOM_CSS = """
     h1 { font-size: 36px; color: #ffffff; }
     h2 { font-size: 28px; color: #ffffff; }
     h3 { font-size: 22px; color: #ffffff; }
-     /* Sidebar styling */
+
+    /* Sidebar styling */
     .sidebar .sidebar-content {
         background-color: #1a1a1a;
         padding: 20px 30px;
         border-radius: 8px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     }
+
     /* Sidebar logo container */
     .sidebar-logo-container {
         display: flex;
@@ -109,10 +117,11 @@ CUSTOM_CSS = """
     .sidebar-logo {
         max-height: 125px; /* Slightly smaller for sidebar */
     }
+
     /* File uploader styling */
     .stFileUploader {
         background-color: #2a2a2a;
-        border: 2px dashed #007bff;
+        border: 2px dashed #bd4043;
         border-radius: 8px;
         padding: 20px;
     }
@@ -122,6 +131,7 @@ CUSTOM_CSS = """
         border-radius: 5px;
         padding: 10px;
     }
+
     /* Mobile responsiveness */
     @media (max-width: 768px) {
         .sidebar-logo-container { flex-direction: column; }
