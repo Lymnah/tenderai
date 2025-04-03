@@ -137,5 +137,51 @@ CUSTOM_CSS = """
         .sidebar-logo-container { flex-direction: column; }
         .stFileUploader { padding: 10px; }
     }
+    /* Custom styles for the main block */
+    .stMain .stVerticalBlock h2 {
+        margin: 2em 0 1em;
+    }
+    .stMain .stVerticalBlock table {
+        hyphens: auto;
+    }
+    .stVerticalBlock hr {
+        background: #333 !important;
+        margin: -3rem 0 2rem !important;
+        height: 1px !important;
+    }
+    .stVerticalBlock h3 {
+        padding-left: 1.2em;
+        font-size: 1.65rem;
+        font-weight: 100;
+    }
+    .stVerticalBlock h3::first-letter {
+        margin-left: -1.5em;
+        margin-right: .25em;
+        font-size: 0.75em;
+    }
+    .stVerticalBlock .stExpander {
+        margin-bottom: 2em;
+    }
+    .stVerticalBlock .stExpander details {
+        background: rgb(34, 41, 46);
+        border: none
+    }
+    .stVerticalBlock .stDownloadButton {
+        margin: 3em 0;
+        text-align: center;
+    }
+    .stVerticalBlock .stButton button:hover {
+        background-color: #333;
+        border-color: #0056b3;
+        color: #fff;
+    }
+    /* Form */
+    .st-emotion-cache-qcpnpn {
+        border: none;
+        background: #22292e;
+    }
+    .stVerticalBlock .stForm .stElementContainer:last-child {
+        align-self: flex-end;
+    }
 </style>
 """
