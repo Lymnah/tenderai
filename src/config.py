@@ -111,7 +111,7 @@ CUSTOM_CSS = """
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
         margin-top: 0px;
     }
     .sidebar-logo {
@@ -139,10 +139,34 @@ CUSTOM_CSS = """
     }
     /* Custom styles for the main block */
     .stMain .stVerticalBlock h2 {
-        margin: 2em 0 1em;
+        margin: 0.5em 0 1em;
     }
+    /* Table styling to prevent overflow */
     .stMain .stVerticalBlock table {
-        hyphens: auto;
+        max-width: 100%; /* Ensure table doesn't exceed container width */
+        width: 100%; /* Make table take full available width */
+        table-layout: auto; /* Allow columns to adjust based on content */
+        border-collapse: collapse; /* Ensure borders are clean */
+    }
+    .stMain .stVerticalBlock table th,
+    .stMain .stVerticalBlock table td {
+        word-break: break-word; /* Break long words to fit within cell */
+        hyphens: auto; /* Enable hyphenation for long words */
+        padding: 8px; /* Add padding for readability */
+        text-align: left; /* Align text to the left */
+    }
+    /* Optional: Set specific column widths to prioritize Date column */
+    .stMain .stVerticalBlock table th:nth-child(1),
+    .stMain .stVerticalBlock table td:nth-child(1) {
+        width: 15%; /* Date column */
+    }
+    .stMain .stVerticalBlock table th:nth-child(2),
+    .stMain .stVerticalBlock table td:nth-child(2) {
+        width: 50%; /* Event column */
+    }
+    .stMain .stVerticalBlock table th:nth-child(3),
+    .stMain .stVerticalBlock table td:nth-child(3) {
+        width: 35%; /* Source File column */
     }
     .stVerticalBlock hr {
         background: #333 !important;
@@ -153,11 +177,6 @@ CUSTOM_CSS = """
         padding-left: 1.2em;
         font-size: 1.65rem;
         font-weight: 100;
-    }
-    .stVerticalBlock h3::first-letter {
-        margin-left: -1.5em;
-        margin-right: .25em;
-        font-size: 0.75em;
     }
     .stVerticalBlock .stExpander {
         margin-bottom: 2em;

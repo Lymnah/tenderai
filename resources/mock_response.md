@@ -40,15 +40,11 @@ gpt-4o-mini
 
 ## 👤 Client Information
 
-**View Client Information**
-
 - **Name**: Groupe E SA
 - **Role**: Adjudicateur (from 02_Spécification_techniques_et_particulières_Câble_et_accessoires_60kV_V2.docx), Service Achat (from CONSIG~1.pdf), Not specified (from other files)
 - **Contact Details**: Route de Morat 135, 1763 Granges-Paccot, achats@groupe-e.ch (from CONSIG~1.pdf), T +41 26 352 53 17, F +41 26 352 51 99 (from multiple files)
 
 ## 📝 Tender Summary
-
-**View Tender Summary**
 
 ### Tender Summary
 
@@ -131,8 +127,6 @@ This summary captures the essential details of the tender as outlined in the pro
 
 ## 🕒 All Important Dates and Milestones
 
-**View Consolidated Dates**
-
 | **Date**          | **Event**                                                                                                                                 | **Source File**                                                                               |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | 10.12.2019        | Communes du Locle et de la Chaux-de-Fonds Ligne 60kV Chevrolet - Le Locle Est Chambre de jonction / Type Gatic ou similaire               | 6015-A.0.LI.18.002.pdf                                                                        |
@@ -151,8 +145,6 @@ This summary captures the essential details of the tender as outlined in the pro
 | June 2021         | Envisaged contract signing date                                                                                                           | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
 
 ## 🔧 All Technical Requirements
-
-**View Consolidated Requirements**
 
 ### Combined Requirements from Tender Documents
 
@@ -265,8 +257,6 @@ achats@groupe-e.ch.
 
 ## 📁 Consolidated Required Folder Structure
 
-**View Consolidated Folder Structure**
-
 ### Unified Folder Structure for Tender Submission
 
 - **Présentation du soumissionnaire**
@@ -325,15 +315,9 @@ achats@groupe-e.ch.
 
 ### 🕒 Important Dates and Milestones per File
 
-**View Dates per File**
-
 ### 🔧 Technical Requirements per File
 
-**View Requirements per File**
-
 ### 📁 Required Folder Structure per File
-
-**View Folder Structure per File**
 
 ## 💬 Chat with Assistant
 
