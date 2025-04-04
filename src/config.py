@@ -317,5 +317,26 @@ CUSTOM_CSS = f"""
             padding: 10px;
         }}
     }}
+
+    /* Remove padding from list items */
+    .st-emotion-cache-seewz2 li {{
+        padding: 0px;
+    }}
+    .st-emotion-cache-1clstc5 {{
+        padding-bottom: 3rem;
+        padding-left: 2rem;
+        padding-right: 2rem;
+    }}
+    .stMain .stVerticalBlock h4 {{
+        color: #fb464c;
+        margin-bottom: 1rem;
+        margin-top: 1.5em;
+    }}
+    .st-emotion-cache-seewz2 a {{
+        color: rgb(251, 70, 76);
+    }}
+    .stTextArea textarea {{
+        border: 2px rgb(251, 70, 76);
+    }}
 </style>
 """
