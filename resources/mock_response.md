@@ -123,7 +123,7 @@ The contractor must have liability insurance coverage of at least CHF 5,000,000.
 
 This summary captures the essential details of the tender as outlined in the provided documents. If further details are needed or specific sections of the tender require clarification, please let me know.
 
-## 🕒 All Important Dates and Milestones
+## 📅 All Important Dates and Milestones
 
 | **Date**          | **Event**                                                                                                                                 | **Source File**                                                                               |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -311,7 +311,7 @@ achats@groupe-e.ch.
 
 ## 📄 Per-File Analysis
 
-### 🕒 Important Dates and Milestones per File
+### 📅 Important Dates and Milestones per File
 
 ### 🔧 Technical Requirements per File
 

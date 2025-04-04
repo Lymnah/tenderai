@@ -66,7 +66,7 @@ def render_main_content(
             st.markdown("No summary generated from the provided files.")
 
     # Consolidated Dates
-    st.subheader("🕒 All Important Dates and Milestones")
+    st.subheader("📅 All Important Dates and Milestones")
     with st.expander("View Consolidated Dates", expanded=True):
         if synthesized_dates.strip() and synthesized_dates.strip() != "NO_INFO_FOUND":
             st.markdown(synthesized_dates, unsafe_allow_html=False)
@@ -99,7 +99,7 @@ def render_main_content(
     st.header("📄 Per-File Analysis", divider=True)
 
     # Per-File Dates
-    st.subheader("🕒 Important Dates and Milestones per File")
+    st.subheader("📅 Important Dates and Milestones per File")
     with st.expander("View Dates per File", expanded=False):
         consolidated_dates = render_per_file_section(
             all_dates, uploaded_file_ids, file_id_to_name, "Dates"
@@ -180,7 +180,7 @@ def render_main_content(
             + "\n\n"
         )
     st.download_button(
-        "📥 Download Full Report",
+        "Download Full Report",
         full_report,
         file_name="tender_analysis_report.md",
         mime="text/plain",

@@ -109,10 +109,10 @@ CUSTOM_CSS = f"""
 
     .stMain .stVerticalBlock h4 {{
         font-size: 1.6rem; /* Clearly smaller than h2 */
-        color: var(--h2-color);
+        color: var(--primary-color);
         font-weight: 600;
-        padding-bottom: 2px;
-        margin-bottom: 0.4rem;
+        margin-bottom: 1rem;
+        margin-top: 1.5em;
     }}
 
     .stMain .stVerticalBlock h5 {{
@@ -330,11 +330,6 @@ CUSTOM_CSS = f"""
         padding-bottom: 3rem;
         padding-left: 2rem;
         padding-right: 2rem;
-    }}
-    .stMain .stVerticalBlock h4 {{
-        color: #fb464c;
-        margin-bottom: 1rem;
-        margin-top: 1.5em;
     }}
     .st-emotion-cache-seewz2 a {{
         color: rgb(251, 70, 76);

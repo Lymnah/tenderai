@@ -66,7 +66,7 @@ def load_mock_response(prompt_type):
             return sections.get("📝 Tender Summary", "No summary found.")
         elif "dates" in prompt_type_lower or "timeline" in prompt_type_lower:
             return sections.get(
-                "🕒 All Important Dates and Milestones", "No dates found."
+                "📅 All Important Dates and Milestones", "No dates found."
             )
         elif "requirements" in prompt_type_lower:
             return sections.get(
