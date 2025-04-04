@@ -36,7 +36,7 @@ gpt-4o-mini
 
 # Logs
 
-# 📊 Consolidated Tender Analysis
+# Consolidated Tender Analysis
 
 ## 👤 Client Information
 
@@ -45,8 +45,6 @@ gpt-4o-mini
 - **Contact Details**: Route de Morat 135, 1763 Granges-Paccot, achats@groupe-e.ch (from CONSIG~1.pdf), T +41 26 352 53 17, F +41 26 352 51 99 (from multiple files)
 
 ## 📝 Tender Summary
-
-### Tender Summary
 
 #### Purpose
 
@@ -255,7 +253,7 @@ achats@groupe-e.ch.
 - **Duration of Validity**: La durée de validité de l’offre est jusqu’au 31.12.2021.
 - **Confidentiality**: Les documents remis par l’adjudicateur restent confidentiels.
 
-## 📁 Consolidated Required Folder Structure
+## Consolidated Required Folder Structurex
 
 ### Unified Folder Structure for Tender Submission
 
