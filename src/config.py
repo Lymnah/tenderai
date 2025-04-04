@@ -338,5 +338,8 @@ CUSTOM_CSS = f"""
     .stTextArea textarea {{
         border: 2px rgb(251, 70, 76);
     }}
+    [data-testid="stSidebarContent"] {{
+        padding: 0;
+    }}
 </style>
 """
