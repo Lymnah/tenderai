@@ -145,7 +145,7 @@ CUSTOM_CSS = f"""
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 30px;
+        margin-bottom: 50px;
         margin-top: 0px;
     }}
 
@@ -154,7 +154,11 @@ CUSTOM_CSS = f"""
         border-radius: 4px; /* Obsidian image border-radius */
     }}
 
-    /* Change font color of text inside st.code blocks in the sidebar */
+    .stSidebar h2 {{
+        padding-top: 30px;
+    }}
+
+        /* Change font color of text inside st.code blocks in the sidebar */
     [data-testid="stSidebarContent"] [data-testid="stCode"] code {{
         color: var(--text-color) !important; /* Use the theme's text color for general text */
     }}

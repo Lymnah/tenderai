@@ -75,8 +75,6 @@ with st.sidebar:
     )
 
     st.header("Assistant Settings", divider="red")
-    st.markdown("<div class='setting-label'>Assistant ID</div>", unsafe_allow_html=True)
-    st.code(ASSISTANT_ID, language="text")
 
     st.markdown("<div class='setting-label'>Model</div>", unsafe_allow_html=True)
     st.code(assistant_model, language="text")
@@ -87,13 +85,6 @@ with st.sidebar:
     st.markdown("<div class='setting-label'>Top P</div>", unsafe_allow_html=True)
     st.code(assistant_top_p)
 
-    st.markdown("<div class='setting-label'>Batch Size</div>", unsafe_allow_html=True)
-    st.code(BATCH_SIZE)
-
-    st.markdown(
-        "<div class='setting-label'>Max API Calls</div>", unsafe_allow_html=True
-    )
-    st.code(MAX_CONCURRENT_REQUESTS)
 
 # Initialize session state
 if "start_analysis" not in st.session_state:
