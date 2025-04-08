@@ -13,6 +13,84 @@ For each task:
 Your outputs are used in a legal and professional context. Prioritize completeness, clarity, and factual integrity over style or creativity.
 """
 
+# Client information extraction prompts
+## Single file client information extraction
+CLIENT_INFO_PROMPT = """
+Extract the client's name, role, and contact details from "{file_name}".
+Look for sections like "Client", "Adjudicator", "Issuing Organization", or similar.
+Extract:
+- Name: The name of the client organization or individual.
+- Role: The role or title of the client (e.g., "Project Manager", "Procurement Officer").
+- Contact Details: Any contact information provided, such as address, email, phone number.
+If any of these are not found, indicate "Not specified".
+Format the output as:
+- Name: [name]
+- Role: [role]
+- Contact Details: [contact details]
+If no client information is found, return exactly: NO_INFO_FOUND
+"""
+
+## Synthesize client information from multiple files
+SYNTHESIZE_CLIENT_INFO_PROMPT = """
+You have extracted client information from multiple files related to a tender process. The information is provided below, each associated with a source file.
+
+{client_info_data}
+
+Your task is to synthesize this data into a single, cohesive client information section.
+
+Follow these guidelines:
+1. Combine the name, role, and contact details from all files.
+2. If multiple files provide the same information, use the most detailed or complete version.
+3. If there are conflicts, note them (e.g., "Name: Company A (file1), Company B (file2)").
+4. If a piece of information is not found in any file, indicate "Not specified".
+5. Present the final information as:
+- Name: [name]
+- Role: [role]
+- Contact Details: [contact details]
+If no client information is found across all files, return exactly: NO_INFO_FOUND
+"""
+
+# Summary prompts
+## Prompt for summarizing a batch of files
+SUMMARY_PROMPT = """
+Summarize the tender based on the provided documents, focusing on:
+- **Purpose**: Overall purpose of the tender
+- **Main Deliverables**: Key deliverables or items to be provided
+- **Scope and Scale**: Project scope and scale
+- **Timeline and Submission**: Key dates (e.g., deadlines) and submission requirements
+- **Evaluation Criteria**: How bids will be evaluated
+- **Contractual Conditions**: Key terms and unique clauses
+- **Additional Key Details**: Include other critical information such as risks, penalties, stakeholders, or budget constraints, if specified.
+Cite sources as [file name] where applicable.
+If no summary can be generated due to lack of relevant information, return exactly: NO_INFO_FOUND
+"""
+
+## Prompt for combining partial summaries into a final summary
+FINAL_SUMMARY_PROMPT = """
+Combine the following partial summaries into a cohesive overall summary that reads naturally and ensures no information is lost:
+{partial_summaries}
+
+Additionally, incorporate the following synthesized data to ensure all critical details are included:
+
+Synthesized Dates:
+{synthesized_dates}
+
+Synthesized Requirements:
+{synthesized_requirements}
+
+Follow these guidelines:
+1. **Preserve All Unique Information**: Include all unique details from each partial summary.
+2. **Merge Similar Information Intelligently**: Combine overlapping details (e.g., dates) into a single entry, retaining the most specific information.
+3. **Resolve Conflicts Transparently**: If details conflict (e.g., different dates), include both and note the discrepancy (e.g., "[Conflict: Source A says X, Source B says Y]").
+4. **Maintain Structure**: Use the structure from the partial summaries (e.g., Purpose, Deliverables), covering all sections. If a section is missing from some summaries, note it as "Not specified in all sources."
+5. **Incorporate Synthesized Data**:
+   - Include key dates from the synthesized dates in the "Timeline and Submission" section.
+   - Include key requirements (e.g., mandatory, compliance, submission documents) in the "Evaluation Criteria" and "Additional Key Details" sections.
+6. **Cite Sources**: Combine citations where appropriate (e.g., [file1, file2]).
+7. **Ensure Cohesion**: Write the summary in a natural, flowing style.
+If no summary can be generated due to lack of relevant information, return exactly: NO_INFO_FOUND
+"""
+
 # Prompt for extracting dates from a single file
 DATES_PROMPT = """
 Extract all dates related to the tender process from "{file_name}", including deadlines, milestones, and key events. Tender-related dates often include:
@@ -43,7 +121,7 @@ Follow these guidelines:
 3. If a date includes a time, include it in the date column (e.g., "30.04.2021 at 12h").
 4. If the same date and event are mentioned in multiple files, list it once and cite all source files (e.g., "file1, file2").
 5. If there are conflicting dates for the same event, note the conflict (e.g., "30.04.2021 (file1), 01.05.2021 (file2)").
-6. Sort the table chronologically by date.
+6. Sort the table in reverse chronological order (most recent date first).
 7. If no dates are found or all entries are "NO_INFO_FOUND", return exactly: NO_INFO_FOUND
 
 Present the final table in markdown format.
@@ -105,46 +183,6 @@ Follow these guidelines:
 4. If neither a folder structure nor submission documents are found, return exactly: NO_INFO_FOUND
 """
 
-# Prompt for summarizing a batch of files
-SUMMARY_PROMPT = """
-Summarize the tender based on the provided documents, focusing on:
-- **Purpose**: Overall purpose of the tender
-- **Main Deliverables**: Key deliverables or items to be provided
-- **Scope and Scale**: Project scope and scale
-- **Timeline and Submission**: Key dates (e.g., deadlines) and submission requirements
-- **Evaluation Criteria**: How bids will be evaluated
-- **Contractual Conditions**: Key terms and unique clauses
-- **Additional Key Details**: Include other critical information such as risks, penalties, stakeholders, or budget constraints, if specified.
-Cite sources as [file name] where applicable.
-If no summary can be generated due to lack of relevant information, return exactly: NO_INFO_FOUND
-"""
-
-# Prompt for combining partial summaries into a final summary
-FINAL_SUMMARY_PROMPT = """
-Combine the following partial summaries into a cohesive overall summary that reads naturally and ensures no information is lost:
-{partial_summaries}
-
-Additionally, incorporate the following synthesized data to ensure all critical details are included:
-
-Synthesized Dates:
-{synthesized_dates}
-
-Synthesized Requirements:
-{synthesized_requirements}
-
-Follow these guidelines:
-1. **Preserve All Unique Information**: Include all unique details from each partial summary.
-2. **Merge Similar Information Intelligently**: Combine overlapping details (e.g., dates) into a single entry, retaining the most specific information.
-3. **Resolve Conflicts Transparently**: If details conflict (e.g., different dates), include both and note the discrepancy (e.g., "[Conflict: Source A says X, Source B says Y]").
-4. **Maintain Structure**: Use the structure from the partial summaries (e.g., Purpose, Deliverables), covering all sections. If a section is missing from some summaries, note it as "Not specified in all sources."
-5. **Incorporate Synthesized Data**:
-   - Include key dates from the synthesized dates in the "Timeline and Submission" section.
-   - Include key requirements (e.g., mandatory, compliance, submission documents) in the "Evaluation Criteria" and "Additional Key Details" sections.
-6. **Cite Sources**: Combine citations where appropriate (e.g., [file1, file2]).
-7. **Ensure Cohesion**: Write the summary in a natural, flowing style.
-If no summary can be generated due to lack of relevant information, return exactly: NO_INFO_FOUND
-"""
-
 
 # Prompt to synthesize requirements from all files
 SYNTHESIZE_REQUIREMENTS_PROMPT = """
@@ -164,43 +202,6 @@ Follow these guidelines:
 4. If all categories are empty or all entries are "NO_INFO_FOUND", return exactly: NO_INFO_FOUND
 
 Present the final list in markdown format with categories and requirements.
-"""
-
-
-# Prompt for extracting client information from a single file
-CLIENT_INFO_PROMPT = """
-Extract the client's name, role, and contact details from "{file_name}".
-Look for sections like "Client", "Adjudicator", "Issuing Organization", or similar.
-Extract:
-- Name: The name of the client organization or individual.
-- Role: The role or title of the client (e.g., "Project Manager", "Procurement Officer").
-- Contact Details: Any contact information provided, such as address, email, phone number.
-If any of these are not found, indicate "Not specified".
-Format the output as:
-- Name: [name]
-- Role: [role]
-- Contact Details: [contact details]
-If no client information is found, return exactly: NO_INFO_FOUND
-"""
-
-# Prompt to synthesize client information from all files
-SYNTHESIZE_CLIENT_INFO_PROMPT = """
-You have extracted client information from multiple files related to a tender process. The information is provided below, each associated with a source file.
-
-{client_info_data}
-
-Your task is to synthesize this data into a single, cohesive client information section.
-
-Follow these guidelines:
-1. Combine the name, role, and contact details from all files.
-2. If multiple files provide the same information, use the most detailed or complete version.
-3. If there are conflicts, note them (e.g., "Name: Company A (file1), Company B (file2)").
-4. If a piece of information is not found in any file, indicate "Not specified".
-5. Present the final information as:
-- Name: [name]
-- Role: [role]
-- Contact Details: [contact details]
-If no client information is found across all files, return exactly: NO_INFO_FOUND
 """
 
 

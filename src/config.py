@@ -133,6 +133,11 @@ CUSTOM_CSS = f"""
         max-width: 900px !important; /* Increase the width of the main block */
     }}
 
+    /* Remove margin-bottom from <p> tags inside <li> elements */
+    .stMain .stVerticalBlock ul li p {{
+        margin-bottom: 0;
+    }}
+
     /* Sidebar Styling */
     [data-testid="stSidebarContent"] {{
         background-color: var(--background-secondary);

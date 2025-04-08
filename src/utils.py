@@ -51,7 +51,9 @@ def load_mock_response(prompt_type):
                         sections[current_subsection] = "\n".join(
                             current_subcontent
                         ).strip()
-                    current_subsection = line[3:].strip()
+                    current_subsection = line[
+                        2:
+                    ].strip()  # Changed from line[3:] to line[2:] to include the full heading text
                     current_subcontent = []
                 else:
                     current_subcontent.append(line)
@@ -69,12 +71,13 @@ def load_mock_response(prompt_type):
                 "📅 All Important Dates and Milestones", "No dates found."
             )
         elif "requirements" in prompt_type_lower:
+            # Map to "Combined Requirements from Tender Documents" instead of "🔧 All Technical Requirements"
             return sections.get(
-                "🔧 All Technical Requirements", "No requirements found."
+                "Combined Requirements from Tender Documents", "No requirements found."
             )
         elif "folder structure" in prompt_type_lower:
             return sections.get(
-                "📁 Consolidated Required Folder Structure",
+                "Unified Folder Structure",  # Adjusted to match the ## heading
                 "No folder structure found.",
             )
         elif "additional key details" in prompt_type_lower:

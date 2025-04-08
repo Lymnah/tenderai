@@ -1,40 +1,4 @@
-# Your Company Logo
-
-# Simulation Mode
-
-# Assistant Settings
-
-## Assistant ID
-
-asst_r3YIimQ4CJzbBbeEhn8ehMsI
-
-## Model
-
-gpt-4o-mini
-
-## Temperature
-
-0.01
-
-## Top P
-
-1.0
-
-## Batch Size
-
-4
-
-## Max API Calls
-
-5
-
-# Your Company Logo
-
-# Upload File
-
-# Analysis
-
-# Logs
+# Tender AI
 
 # Consolidated Tender Analysis
 
@@ -101,7 +65,7 @@ In case of non-compliance with quality standards, the client may require modific
 The contractor must collaborate with other contractors and adhere to the project timeline.  
 The contractor must have liability insurance coverage of at least CHF 5,000,000.
 
-## Synthesized Dates
+# 📅 All Important Dates and Milestones
 
 | **Date**          | **Event**                                                                                                                                 | **Source File**                                                                               |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -121,30 +85,9 @@ The contractor must have liability insurance coverage of at least CHF 5,000,000.
 | May 2021          | Date of adjudication decision                                                                                                             | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
 | June 2021         | Envisaged contract signing date                                                                                                           | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
 
-This summary captures the essential details of the tender as outlined in the provided documents. If further details are needed or specific sections of the tender require clarification, please let me know.
+# 🔧 All Technical Requirements
 
-## 📅 All Important Dates and Milestones
-
-| **Date**          | **Event**                                                                                                                                 | **Source File**                                                                               |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 10.12.2019        | Communes du Locle et de la Chaux-de-Fonds Ligne 60kV Chevrolet - Le Locle Est Chambre de jonction / Type Gatic ou similaire               | 6015-A.0.LI.18.002.pdf                                                                        |
-| 10.12.2019        | 2019DPDAM 6015-A                                                                                                                          | 6015-A.0.LI.18.002.pdf                                                                        |
-| 05.02.2020        | parDescriptionListe des modificationsAPRODAMModifications PE                                                                              | 6015-A.0.LI.18.002.pdf                                                                        |
-| 05.02.2020        | Communes du Locle et de la Chaux-de-Fonds Ligne 60kV Chevrolet - Le Locle Est Modification du tracé existant Coupe type PRODAM            | 6015-A.0.LI.16.003.pdf                                                                        |
-| 05.02.2020        | 2020DAM1:206015-A                                                                                                                         | 6015-A.0.LI.16.003.pdf                                                                        |
-| 05.02.2020        | Communes du Locle et de la Chaux-de-Fonds Ligne 60kV Chevrolet - Le Locle Est Modification du tracé existant Coupe type avec ViteosPRODAM | 6015-A.0.LI.16.002.pdf                                                                        |
-| 05.02.2020        | 2020DAM1:206015-A                                                                                                                         | 6015-A.0.LI.16.002.pdf                                                                        |
-| 31.12.2021        | Duration of validity of the offer                                                                                                         | 02_Spécification_techniques_et_particulières_Câble_et_accessoires_60kV_V2.docx                |
-| 19.03.2021        | Publication Date                                                                                                                          | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
-| 21.04.2021        | Deadline for questions                                                                                                                    | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
-| 23.04.2021        | Deadline for responses from the adjudicator                                                                                               | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
-| 30.04.2021 at 12h | Submission deadline                                                                                                                       | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
-| May 2021          | Date of adjudication decision                                                                                                             | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
-| June 2021         | Envisaged contract signing date                                                                                                           | 00_Dossier_d'appel_d'offres_Le Locle - Rte de contournement de La Chaux-de-Fond_annexe_K2.pdf |
-
-## 🔧 All Technical Requirements
-
-### Combined Requirements from Tender Documents
+## Combined Requirements from Tender Documents
 
 #### Submission Documents
 
@@ -242,7 +185,7 @@ achats@groupe-e.ch.
 - The company must ensure that all personnel have valid work permits.
 - All materials must be certified according to CEI standards.
 
-#### Any Other Relevant Categories
+#### Other Relevant Categories
 
 - **Safety Requirements**:
   - Hard hats and safety shoes are mandatory on sites.
@@ -253,9 +196,9 @@ achats@groupe-e.ch.
 - **Duration of Validity**: La durée de validité de l’offre est jusqu’au 31.12.2021.
 - **Confidentiality**: Les documents remis par l’adjudicateur restent confidentiels.
 
-## Consolidated Required Folder Structurex
+# Consolidated Required Folder Structure
 
-### Unified Folder Structure for Tender Submission
+## Unified Folder Structure
 
 - **Présentation du soumissionnaire**
 
@@ -309,14 +252,6 @@ achats@groupe-e.ch.
   - All documents necessary for proper assessment of the offer
   - Offer must be fully completed, dated, and signed
 
-## 📄 Per-File Analysis
-
-### 📅 Important Dates and Milestones per File
-
-### 🔧 Technical Requirements per File
-
-### 📁 Required Folder Structure per File
-
-## 💬 Chat with Assistant
+# 💬 Chat with Assistant
 
 Ask a question about the analyzed documents:

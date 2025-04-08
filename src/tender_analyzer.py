@@ -68,9 +68,9 @@ def init_logger():
 
 # Functions to log specific types of data
 def log_raw_response(logger, task_name, response, source="AI"):
-    # Truncate response to 1000 characters to avoid log truncation
-    if len(response) > 1000:
-        response = response[:1000] + "... (truncated)"
+    # Truncate response to 3000 characters to avoid log truncation
+    if len(response) > 3000:
+        response = response[:3000] + "... (truncated)"
     logger.info(
         f"Raw response for {task_name} (Source: {source}):\n{response}\n{'-'*50}"
     )
@@ -716,6 +716,7 @@ def synthesize_results(
     logger,
     simulation_mode,
 ):
+    # Synthesize dates
     dates_data = "\n\n".join(
         [
             f"File: {file_id_to_name[file_id]}\n{dates}"
