@@ -218,14 +218,6 @@ CUSTOM_CSS = f"""
         font-family: {FONT_FAMILY};
     }}
 
-    /* Chat Messages */
-    .chat-message {{
-        padding: 15px;
-        border-radius: var(--border-radius);
-        margin-bottom: 15px;
-        box-shadow: var(--shadow-s);
-    }}
-
     .user-message {{
         background-color: {BACKGROUND_BASE_30}; /* Obsidian --color-base-30 */
         color: var(--text-color);

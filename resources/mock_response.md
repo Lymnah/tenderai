@@ -251,7 +251,3 @@ achats@groupe-e.ch.
   - Copies of CVs, certificates, and diplomas for key personnel (if required)
   - All documents necessary for proper assessment of the offer
   - Offer must be fully completed, dated, and signed
-
-# 💬 Chat with Assistant
-
-Ask a question about the analyzed documents:

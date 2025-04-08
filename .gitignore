@@ -5,3 +5,5 @@ src/utils.py
 .DS_Store
 logs/
 logs.txt
+resources/mock_response copy.md
+resources/mock_response copy 2.md
