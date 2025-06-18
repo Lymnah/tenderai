@@ -147,9 +147,17 @@ with tab1:
     )
     col1, col2 = st.columns([1, 1])
     with col1:
-        analyze_button = st.button("Analyze Files", use_container_width=True)
+        analyze_button = st.button(
+            "Analyze Files",
+            use_container_width=True,
+            disabled=not uploaded_files_input,
+        )
     with col2:
-        clear_button = st.button("Clear All Files", use_container_width=True)
+        clear_button = st.button(
+            "Clear All Files",
+            use_container_width=True,
+            disabled=not uploaded_files_input,
+        )
 
 # Handle file uploads
 if uploaded_files_input:
