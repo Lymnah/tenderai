@@ -43,7 +43,7 @@ def render_main_content(
     progress_log_messages = analysis_results["progress_log_messages"]
 
     # Consolidated Analysis Section
-    st.header("Consolidated Tender Analysis", divider="grey")
+    st.header("Tender Analysis", divider="grey")
 
     # Client Information
     st.subheader("👤 Client Information")
@@ -67,7 +67,7 @@ def render_main_content(
 
     # Consolidated Dates
     st.subheader("📅 All Important Dates and Milestones")
-    with st.expander("View Consolidated Dates", expanded=True):
+    with st.expander("View dates", expanded=True):
         if synthesized_dates.strip() and synthesized_dates.strip() != "NO_INFO_FOUND":
             st.markdown(synthesized_dates, unsafe_allow_html=False)
         else:
@@ -75,7 +75,7 @@ def render_main_content(
 
     # Consolidated Requirements
     st.subheader("🔧 All Technical Requirements")
-    with st.expander("View Consolidated Requirements", expanded=True):
+    with st.expander("View requirements", expanded=True):
         if (
             synthesized_requirements.strip()
             and synthesized_requirements.strip() != "NO_INFO_FOUND"
@@ -85,8 +85,8 @@ def render_main_content(
             st.markdown("No technical requirements found across all files.")
 
     # Consolidated Folder Structure
-    st.subheader("📁 Consolidated Required Folder Structure")
-    with st.expander("View Consolidated Folder Structure", expanded=True):
+    st.subheader("📁 Arboresence structure")
+    with st.expander("View Arboresence structure", expanded=True):
         if (
             synthesized_folder_structure.strip()
             and synthesized_folder_structure.strip() != "NO_INFO_FOUND"
@@ -95,44 +95,46 @@ def render_main_content(
         else:
             st.markdown("No folder structure information found across all files.")
 
-    # Per-File Analysis Section
-    st.header("📄 Per-File Analysis", divider=True)
+    # Per File Analysis Section only if not in simulation mode
+    if not st.session_state.simulation_mode:
+        # Per-File Analysis Section
+        st.header("📄 Per-File Analysis", divider=True)
 
-    # Per-File Dates
-    st.subheader("📅 Important Dates and Milestones per File")
-    with st.expander("View Dates per File", expanded=False):
-        consolidated_dates = render_per_file_section(
-            all_dates, uploaded_file_ids, file_id_to_name, "Dates"
-        )
-        if consolidated_dates:
-            st.markdown(consolidated_dates, unsafe_allow_html=False)
-        else:
-            st.markdown("No important dates extracted from the provided files.")
+        # Per-File Dates
+        st.subheader("📅 Important Dates and Milestones per File")
+        with st.expander("View Dates per File", expanded=False):
+            consolidated_dates = render_per_file_section(
+                all_dates, uploaded_file_ids, file_id_to_name, "Dates"
+            )
+            if consolidated_dates:
+                st.markdown(consolidated_dates, unsafe_allow_html=False)
+            else:
+                st.markdown("No important dates extracted from the provided files.")
 
-    # Per-File Requirements
-    st.subheader("🔧 Technical Requirements per File")
-    with st.expander("View Requirements per File", expanded=False):
-        consolidated_requirements = render_per_file_section(
-            all_requirements, uploaded_file_ids, file_id_to_name, "Requirements"
-        )
-        if consolidated_requirements:
-            st.markdown(consolidated_requirements, unsafe_allow_html=False)
-        else:
-            st.markdown("No technical requirements extracted from the provided files.")
+        # Per-File Requirements
+        st.subheader("🔧 Technical Requirements per File")
+        with st.expander("View Requirements per File", expanded=False):
+            consolidated_requirements = render_per_file_section(
+                all_requirements, uploaded_file_ids, file_id_to_name, "Requirements"
+            )
+            if consolidated_requirements:
+                st.markdown(consolidated_requirements, unsafe_allow_html=False)
+            else:
+                st.markdown("No technical requirements extracted from the provided files.")
 
-    # Per-File Folder Structure
-    st.subheader("📁 Required Folder Structure per File")
-    with st.expander("View Folder Structure per File", expanded=False):
-        consolidated_folder_structure = render_per_file_section(
-            all_folder_structures,
-            uploaded_file_ids,
-            file_id_to_name,
-            "Folder Structure",
-        )
-        if consolidated_folder_structure:
-            st.markdown(consolidated_folder_structure, unsafe_allow_html=False)
-        else:
-            st.markdown("No folder structure extracted from the provided files.")
+        # Per-File Folder Structure
+        st.subheader("📁 Required Folder Structure per File")
+        with st.expander("View Folder Structure per File", expanded=False):
+            consolidated_folder_structure = render_per_file_section(
+                all_folder_structures,
+                uploaded_file_ids,
+                file_id_to_name,
+                "Folder Structure",
+            )
+            if consolidated_folder_structure:
+                st.markdown(consolidated_folder_structure, unsafe_allow_html=False)
+            else:
+                st.markdown("No folder structure extracted from the provided files.")
 
     # Update Download Report with Correct Order
     full_report = "Tender Analysis Report\n\n"
@@ -160,25 +162,29 @@ def render_main_content(
         and synthesized_folder_structure.strip() != "NO_INFO_FOUND"
     ):
         full_report += (
-            "## Consolidated Required Folder Structure\n"
+            "## Arborescence Structure\n"
             + synthesized_folder_structure
             + "\n\n"
         )
-    # Per-File Analysis Sections
-    if consolidated_dates:
-        full_report += (
-            "## Important Dates and Milestones per File\n" + consolidated_dates + "\n\n"
-        )
-    if consolidated_requirements:
-        full_report += (
-            "## Technical Requirements per File\n" + consolidated_requirements + "\n\n"
-        )
-    if consolidated_folder_structure:
-        full_report += (
-            "## Required Folder Structure per File\n"
-            + consolidated_folder_structure
-            + "\n\n"
-        )
+
+    # Per File Analysis Section only if not in simulation mode
+    if not st.session_state.simulation_mode:
+        # Per-File Analysis Sections
+        if consolidated_dates:
+            full_report += (
+                "## Important Dates and Milestones per File\n" + consolidated_dates + "\n\n"
+            )
+        if consolidated_requirements:
+            full_report += (
+                "## Technical Requirements per File\n" + consolidated_requirements + "\n\n"
+            )
+        if consolidated_folder_structure:
+            full_report += (
+                "## Required Folder Structure per File\n"
+                + consolidated_folder_structure
+                + "\n\n"
+            )
+            
     st.download_button(
         "Download Full Report",
         full_report,

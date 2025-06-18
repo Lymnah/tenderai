@@ -1,6 +1,6 @@
 # Tender AI
 
-# Consolidated Tender Analysis
+# Tender Analysis
 
 ## 👤 Client Information
 
@@ -196,7 +196,7 @@ achats@groupe-e.ch.
 - **Duration of Validity**: La durée de validité de l’offre est jusqu’au 31.12.2021.
 - **Confidentiality**: Les documents remis par l’adjudicateur restent confidentiels.
 
-# Consolidated Required Folder Structure
+# Arborescence Structure
 
 ## Unified Folder Structure
 
