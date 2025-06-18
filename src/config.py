@@ -9,6 +9,7 @@ dotenv.load_dotenv()
 # Environment Variables
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ASSISTANT_ID = os.getenv("OPENAI_ASSISTANT_ID")
+TENDERAI_VERSION = "1.0.0" 
 
 # Check if API key and assistant ID are required (not in simulation mode)
 if "simulation_mode" in st.session_state and st.session_state.simulation_mode:

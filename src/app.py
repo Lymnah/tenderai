@@ -1,5 +1,5 @@
 import streamlit as st
-from config import CUSTOM_CSS, ASSISTANT_ID
+from config import CUSTOM_CSS, ASSISTANT_ID, TENDERAI_VERSION
 from file_handler import upload_files
 from tender_analyzer import (
     analyze_tender,
@@ -75,6 +75,9 @@ with st.sidebar:
     )
 
     st.header("Assistant Settings", divider="red")
+
+    st.markdown("<div class='setting-label'>Version</div>", unsafe_allow_html=True)
+    st.code(TENDERAI_VERSION, language="text")
 
     st.markdown("<div class='setting-label'>Model</div>", unsafe_allow_html=True)
     st.code(assistant_model, language="text")
