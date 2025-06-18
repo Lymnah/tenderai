@@ -69,7 +69,7 @@ with st.sidebar:
     # Add Simulation Mode toggle
     st.header("Simulation Mode", divider="red")
     if "simulation_mode" not in st.session_state:
-        st.session_state.simulation_mode = False
+        st.session_state.simulation_mode = True
     st.session_state.simulation_mode = st.checkbox(
         "Enable Simulation Mode", value=st.session_state.simulation_mode
     )
